@@ -28,11 +28,9 @@ procedure Mutantsolver is
       Account_ID : Unbounded.Unbounded_String;
       URL        : Unbounded.Unbounded_String;
    end record;
-
    Oanda : Oanda_Access;
 
    function Load_Oanda return Oanda_Access;
-
    function Load_Oanda return Oanda_Access is
    begin
       Oanda_Root := Result.Value.Get ("oanda");
@@ -46,15 +44,21 @@ procedure Mutantsolver is
            Unbounded.To_Unbounded_String (Oanda_Root.Get ("url").As_String));
    end Load_Oanda;
 
+   procedure Check_Load_Config_Result;
+   procedure Check_Load_Config_Result is
+   begin
+      if Result.Success then
+         Text_IO.Put_Line ("config loaded with success!");
+         Text_IO.Put_Line (Result.Value.Dump_As_String);
+      else
+         Text_IO.Put_Line ("error while loading config:");
+         Text_IO.Put_Line (Unbounded.To_String (Result.Message));
+         raise Program_Error;
+      end if;
+   end Check_Load_Config_Result;
+
 begin
-   if Result.Success then
-      Text_IO.Put_Line ("config loaded with success!");
-      Text_IO.Put_Line (Result.Value.Dump_As_String);
-   else
-      Text_IO.Put_Line ("error while loading config:");
-      Text_IO.Put_Line (Unbounded.To_String (Result.Message));
-      raise Program_Error;
-   end if;
+   Check_Load_Config_Result;
 
    Oanda := Load_Oanda;
    Local_Headers.Add ("Bearer", Unbounded.To_String (Oanda.Token));
