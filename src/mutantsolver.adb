@@ -17,7 +17,6 @@ use GNATCOLL;
 procedure Mutantsolver is
    package Log renames Simple_Logging;
 
-
    Result        : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
    Data          : Response.Data;
@@ -43,10 +42,14 @@ begin
 
    Oanda_Root := Result.Value.Get ("oanda");
    Oanda :=
-     (Token      => Unbounded.To_Unbounded_String(Oanda_Root.Get ("token").As_String),
-      Account_ID => Oanda_Root.Get ("account_id").As_String,
-      URL        => Oanda_Root.Get ("url").As_String);
-   Local_Headers.Add ("Bearer", Oanda.Token.To_String);
+     (Token      =>
+        Unbounded.To_Unbounded_String (Oanda_Root.Get ("token").As_String),
+      Account_ID =>
+        Unbounded.To_Unbounded_String
+          (Oanda_Root.Get ("account_id").As_String),
+      URL        =>
+        Unbounded.To_Unbounded_String (Oanda_Root.Get ("url").As_String));
+   Local_Headers.Add ("Bearer", Unbounded.To_String (Oanda.Token));
    --  Data := Client.Get (URL => Oanda.URL & "/v3/instruments");
    --  Text_IO.Put (Response.Message_Body (Data));
    Log.Info ("Hello World!");
