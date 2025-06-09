@@ -31,6 +31,21 @@ procedure Mutantsolver is
 
    Oanda : Oanda_Access;
 
+   function Load_Oanda return Oanda_Access;
+
+   function Load_Oanda return Oanda_Access is
+   begin
+      Oanda_Root := Result.Value.Get ("oanda");
+      return
+        (Token      =>
+           Unbounded.To_Unbounded_String (Oanda_Root.Get ("token").As_String),
+         Account_ID =>
+           Unbounded.To_Unbounded_String
+             (Oanda_Root.Get ("account_id").As_String),
+         URL        =>
+           Unbounded.To_Unbounded_String (Oanda_Root.Get ("url").As_String));
+   end Load_Oanda;
+
 begin
    if Result.Success then
       Text_IO.Put_Line ("config loaded with success!");
@@ -38,17 +53,10 @@ begin
    else
       Text_IO.Put_Line ("error while loading config:");
       Text_IO.Put_Line (Unbounded.To_String (Result.Message));
+      raise Program_Error;
    end if;
 
-   Oanda_Root := Result.Value.Get ("oanda");
-   Oanda :=
-     (Token      =>
-        Unbounded.To_Unbounded_String (Oanda_Root.Get ("token").As_String),
-      Account_ID =>
-        Unbounded.To_Unbounded_String
-          (Oanda_Root.Get ("account_id").As_String),
-      URL        =>
-        Unbounded.To_Unbounded_String (Oanda_Root.Get ("url").As_String));
+   Oanda := Load_Oanda;
    Local_Headers.Add ("Bearer", Unbounded.To_String (Oanda.Token));
    --  Data := Client.Get (URL => Oanda.URL & "/v3/instruments");
    --  Text_IO.Put (Response.Message_Body (Data));
