@@ -1,0 +1,18 @@
+name = "mutantsolver"
+description = "Solver for wma strategies"
+version = "0.1.0-dev"
+
+authors = ["krispyensign"]
+maintainers = ["krispyensign <futralj@gmail.com>"]
+maintainers-logins = ["krispyensign"]
+licenses = "Apache-2.0"
+website = ""
+tags = []
+
+executables = ["mutantsolver"]
+
+[[depends-on]]
+aws = "^24.0.0"
+gnatcoll = "^24.0.0"
+ada_toml = "~0.4.0"
+simple_logging = "^1.2.0"
