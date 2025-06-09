@@ -11,38 +11,43 @@ with TOML.File_IO;
 with Ada.Strings.Unbounded;
 use AWS;
 use Ada;
+use Ada.Strings;
 use GNATCOLL;
 
 procedure Mutantsolver is
    package Log renames Simple_Logging;
 
+
    Result        : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
    Data          : Response.Data;
    Local_Headers : Headers.List;
+   Oanda_Root    : TOML.TOML_Value;
 
    type Oanda_Access is record
-      Token      : String (1 .. 80);
-      Account_ID : String (1 .. 80);
-      URL        : String (1 .. 256);
+      Token      : Unbounded.Unbounded_String;
+      Account_ID : Unbounded.Unbounded_String;
+      URL        : Unbounded.Unbounded_String;
    end record;
 
    Oanda : Oanda_Access;
 
 begin
    if Result.Success then
-      Text_IO.Put_Line ("config.toml loaded with success!");
+      Text_IO.Put_Line ("config loaded with success!");
+      Text_IO.Put_Line (Result.Value.Dump_As_String);
    else
-      Text_IO.Put_Line ("error while loading config.toml:");
-      Text_IO.Put_Line (Ada.Strings.Unbounded.To_String (Result.Message));
+      Text_IO.Put_Line ("error while loading config:");
+      Text_IO.Put_Line (Unbounded.To_String (Result.Message));
    end if;
 
+   Oanda_Root := Result.Value.Get ("oanda");
    Oanda :=
-     (Token      => Result.Value.Get ("oanda").Get ("token").As_String,
-      Account_ID => Result.Value.Get ("oanda").Get ("account_id").As_String,
-      URL        => Result.Value.Get ("oanda").Get ("url").As_String);
-   Local_Headers.Add ("Bearer", Oanda.Token);
-   Data := Client.Get (URL => Oanda.URL & "/v3/instruments");
-   Text_IO.Put (Response.Message_Body (Data));
+     (Token      => Unbounded.To_Unbounded_String(Oanda_Root.Get ("token").As_String),
+      Account_ID => Oanda_Root.Get ("account_id").As_String,
+      URL        => Oanda_Root.Get ("url").As_String);
+   Local_Headers.Add ("Bearer", Oanda.Token.To_String);
+   --  Data := Client.Get (URL => Oanda.URL & "/v3/instruments");
+   --  Text_IO.Put (Response.Message_Body (Data));
    Log.Info ("Hello World!");
 end Mutantsolver;
