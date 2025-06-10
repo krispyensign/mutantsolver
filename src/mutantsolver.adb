@@ -21,7 +21,6 @@ procedure Mutantsolver is
      TOML.File_IO.Load_File ("local_config.toml");
    Data          : Response.Data;
    Local_Headers : Headers.List;
-   Oanda_Root    : TOML.TOML_Value;
 
    type Oanda_Access is record
       Token      : Unbounded.Unbounded_String;
@@ -30,19 +29,32 @@ procedure Mutantsolver is
    end record;
    Oanda : Oanda_Access;
 
+   type Chart_Config is record
+      Instrument  : String (1 .. 7);
+      Num_Digits  : Integer;
+      Granularity : String (1 .. 2);
+   end record;
+   Chart : Chart_Config;
+
    function Load_Oanda return Oanda_Access;
    function Load_Oanda return Oanda_Access is
+      Oanda_Root : constant TOML.TOML_Value := Result.Value.Get ("oanda");
    begin
-      Oanda_Root := Result.Value.Get ("oanda");
       return
-        (Token      =>
-           Unbounded.To_Unbounded_String (Oanda_Root.Get ("token").As_String),
-         Account_ID =>
-           Unbounded.To_Unbounded_String
-             (Oanda_Root.Get ("account_id").As_String),
-         URL        =>
-           Unbounded.To_Unbounded_String (Oanda_Root.Get ("url").As_String));
+        (Token      => Oanda_Root.Get ("token").As_Unbounded_String,
+         Account_ID => Oanda_Root.Get ("account_id").As_Unbounded_String,
+         URL        => Oanda_Root.Get ("url").As_Unbounded_String);
    end Load_Oanda;
+
+   function Load_Chart_Config return Chart_Config;
+   function Load_Chart_Config return Chart_Config is
+      Chart_Root : constant TOML.TOML_Value := Result.Value.Get ("chart");
+   begin
+      return
+        (Instrument  => Chart_Root.Get ("instrument").As_String,
+         Num_Digits  => Integer (Chart_Root.Get ("digits").As_Integer),
+         Granularity => Chart_Root.Get ("granularity").As_String);
+   end Load_Chart_Config;
 
    procedure Check_Load_Config_Result;
    procedure Check_Load_Config_Result is
@@ -61,6 +73,8 @@ begin
    Check_Load_Config_Result;
 
    Oanda := Load_Oanda;
+   Chart := Load_Chart_Config;
+
    Local_Headers.Add ("Bearer", Unbounded.To_String (Oanda.Token));
    --  Data := Client.Get (URL => Oanda.URL & "/v3/instruments");
    --  Text_IO.Put (Response.Message_Body (Data));
