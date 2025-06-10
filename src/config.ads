@@ -5,7 +5,7 @@ with Ada.Strings.Unbounded;
 use Ada;
 use Ada.Strings;
 
-package config is
+package Config is
    type Oanda_Access is record
       Token      : Unbounded.Unbounded_String;
       Account_ID : Unbounded.Unbounded_String;
@@ -23,4 +23,4 @@ package config is
    function Load_Chart_Config (Result : TOML.Read_Result) return Chart_Config;
 
    procedure Check_Load_Config_Result (Result : TOML.Read_Result);
-end config;
+end Config;

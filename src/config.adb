@@ -1,6 +1,6 @@
 with Ada.Text_IO;
 
-package body config is
+package body Config is
 
    function Load_Oanda (Result : TOML.Read_Result) return Oanda_Access is
       Oanda_Root : constant TOML.TOML_Value := Result.Value.Get ("oanda");
@@ -33,4 +33,4 @@ package body config is
       end if;
    end Check_Load_Config_Result;
 
-end config;
+end Config;

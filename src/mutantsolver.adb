@@ -4,7 +4,7 @@ with AWS.Client;
 with AWS.Response;
 with AWS.Headers;
 with Ada.Text_IO;
-with config;
+with Config;
 with GNATCOLL.JSON;
 with Simple_Logging;
 with TOML;
@@ -14,7 +14,7 @@ use AWS;
 use Ada;
 use Ada.Strings;
 use GNATCOLL;
-use config;
+use Config;
 
 procedure Mutantsolver is
    package Log renames Simple_Logging;
