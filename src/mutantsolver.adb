@@ -33,8 +33,15 @@ begin
    Oanda := Load_Oanda (Result);
    Chart := Load_Chart_Config (Result);
 
+   Local_Headers.Add ("Content-Type", "application/json");
    Local_Headers.Add ("Bearer", Unbounded.To_String (Oanda.Token));
-   --  Data := Client.Get (URL => Oanda.URL & "/v3/instruments");
-   --  Text_IO.Put (Response.Message_Body (Data));
-   Log.Info ("Hello World!");
+   Data :=
+     Client.Get
+       (URL =>
+          Unbounded.To_String (Oanda.URL)
+          & "/v3/instruments/"
+          & Chart.Instrument
+          & "/candles?price=MAB&granularity="
+          & Chart.Granularity);
+   Text_IO.Put (Response.Message_Body (Data));
 end Mutantsolver;
