@@ -9,20 +9,23 @@ on:
 jobs:
   build:
 
-    runs-on: ubuntu-latest
+    name: CI on linux
+
+    runs-on: debian-latest
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
 
-    - name: Set up GNAT toolchain
-      run: >
-        sudo apt-get update &&
-        sudo apt-get install gnat gprbuild
+    - name: alire-project/setup-alire
+      uses: alire-project/setup-alire@v4
 
-    - uses: alire-project/setup-alire@v4
-      with:
-        version: "nightly"
+    - name: Install toolchain
+      run: |
+        alr --non-interactive settings --global --set toolchain.assistant false
+        alr --non-interactive toolchain --select gnat_native
+        alr --non-interactive toolchain --select gprbuild
 
-    - name: Build
-      run: alr build
+    - name: Build and run
+      run: |
+        alr --non-interactive build
