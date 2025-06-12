@@ -3,3 +3,19 @@
 
 # Ada Library Information
 *.ali
+/obj/
+/bin/
+/alire/
+/config/
+
+# local private configs
+local_config.toml
+
+# other editor info
+.vscode/
+
+# alire
+/obj/
+/bin/
+/alire/
+/config/
