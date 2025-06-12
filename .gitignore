@@ -13,3 +13,9 @@ local_config.toml
 
 # other editor info
 .vscode/
+
+# alire
+/obj/
+/bin/
+/alire/
+/config/

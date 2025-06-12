@@ -1,5 +1,5 @@
 name = "mutantsolver"
-description = "Solver for wma strategies"
+description = ""
 version = "0.1.0-dev"
 
 authors = ["krispyensign"]
@@ -13,6 +13,12 @@ executables = ["mutantsolver"]
 
 [[depends-on]]
 aws = "^24.0.0"
-gnatcoll = "^24.0.0"
-ada_toml = "~0.4.0"
+
+[[depends-on]]
 simple_logging = "^1.2.0"
+
+[[depends-on]]
+gnatcoll = "^24.0.0"
+
+[[depends-on]]
+ada_toml = "~0.5.0"
