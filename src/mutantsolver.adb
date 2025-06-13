@@ -53,6 +53,19 @@ procedure Mutantsolver is
    mid_candles : array (1 .. count) of Candle;
    bid_candles : array (1 .. count) of Candle;
 
+   function make_candle(component: String; current_candle: json.JSON_Value) return Candle;
+   function make_candle(component: String; current_candle: json.JSON_Value) return Candle is
+   begin
+		return (Volume   => current_candle.Get ("volume"),
+               Complete => current_candle.Get ("complete"),
+               Open     => float'Value (current_candle.Get (component).Get ("o")),
+               High     => Float'Value (current_candle.Get (component).Get ("h")),
+               Low      => Float'Value (current_candle.Get (component).Get ("l")),
+               Close    => Float'Value (current_candle.Get (component).Get ("c")),
+               Time     =>
+                 Util.Dates.ISO8601.Value (current_candle.Get ("time")));
+   end make_candle;
+
 begin
    --  setup provider
    Util.Http.Clients.Curl.Register;
@@ -82,33 +95,9 @@ begin
       begin
          for i in 1 .. count loop
             current_candle := json.Array_Element (unmapped_json_array, i);
-            ask_candles (i) :=
-              (Volume   => current_candle.Get ("volume"),
-               Complete => current_candle.Get ("complete"),
-               Open     => float'Value (current_candle.Get ("ask").Get ("o")),
-               High     => Float'Value (current_candle.Get ("ask").Get ("h")),
-               Low      => Float'Value (current_candle.Get ("ask").Get ("l")),
-               Close    => Float'Value (current_candle.Get ("ask").Get ("c")),
-               Time     =>
-                 Util.Dates.ISO8601.Value (current_candle.Get ("time")));
-            mid_candles (i) :=
-              (Volume   => current_candle.Get ("volume"),
-               Complete => current_candle.Get ("complete"),
-               Open     => float'Value (current_candle.Get ("mid").Get ("o")),
-               High     => Float'Value (current_candle.Get ("mid").Get ("h")),
-               Low      => Float'Value (current_candle.Get ("mid").Get ("l")),
-               Close    => Float'Value (current_candle.Get ("mid").Get ("c")),
-               Time     =>
-                 Util.Dates.ISO8601.Value (current_candle.Get ("time")));
-            bid_candles (i) :=
-              (Volume   => current_candle.Get ("volume"),
-               Complete => current_candle.Get ("complete"),
-               Open     => float'Value (current_candle.Get ("bid").Get ("o")),
-               High     => Float'Value (current_candle.Get ("bid").Get ("h")),
-               Low      => Float'Value (current_candle.Get ("bid").Get ("l")),
-               Close    => Float'Value (current_candle.Get ("bid").Get ("c")),
-               Time     =>
-                 Util.Dates.ISO8601.Value (current_candle.Get ("time")));
+			ask_candles (i) := make_candle("ask", current_candle);
+			mid_candles (i) := make_candle("mid", current_candle);
+			bid_candles (i) := make_candle("bid", current_candle);
 
          end loop;
       end;
