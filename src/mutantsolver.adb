@@ -13,6 +13,8 @@ with Ada.Real_Time;
 procedure Mutantsolver is
    package ubo renames Ada.Strings.Unbounded;
    package fixed renames Ada.Strings.Fixed;
+   package strings renames Ada.Strings;
+   package rt renames Ada.Real_Time;
 
    result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
@@ -29,9 +31,9 @@ procedure Mutantsolver is
      & "/candles?price=MAB&granularity="
      & chart.Granularity
      & "&count="
-     & fixed.Trim (Count'Image, Ada.Strings.Left);
+     & fixed.Trim (Count'Image, strings.Left);
 
-   type Candle_Component is (ask, bid, mid);
+   type Candle_Component is (Ask, Bid, Mid);
    type Bucket is record
       Complete  : Boolean;
       Component : Candle_Component;
@@ -40,7 +42,7 @@ procedure Mutantsolver is
       Low       : Float;
       Open      : Float;
       Volume    : Integer;
-      Time      : Ada.Real_Time.Time;
+      Time      : rt.Time;
    end record;
 
 begin
