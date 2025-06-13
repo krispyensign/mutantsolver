@@ -9,6 +9,7 @@ with Util.Http.Clients;
 with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
 with Ada.Real_Time;
+with GNATCOLL.JSON;
 
 procedure Mutantsolver is
    package ubo renames Ada.Strings.Unbounded;
@@ -16,6 +17,7 @@ procedure Mutantsolver is
    package strings renames Ada.Strings;
    package rt renames Ada.Real_Time;
    package io renames Ada.Text_IO;
+   package json renames GNATCOLL.JSON;
 
    result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
@@ -23,8 +25,8 @@ procedure Mutantsolver is
    chart  : constant Chart_Config := Load_Chart_Config (result);
 
    --  construct URL to retrieve candles
-   count           : constant Integer :=
-     (chart.Train_Set_Size + chart.Sample_Set_Size);
+   count : constant Integer := (chart.Train_Set_Size + chart.Sample_Set_Size);
+
    constructed_url : constant String :=
      ubo.To_String (oanda.URL)
      & "/v3/instruments/"
@@ -32,12 +34,10 @@ procedure Mutantsolver is
      & "/candles?price=MAB&granularity="
      & chart.Granularity
      & "&count="
-     & fixed.Trim (Count'Image, strings.Both);
+     & fixed.Trim (count'Image, strings.Both);
 
-   type Candle_Component is (Ask, Bid, Mid);
    type Candle is record
       Complete  : Boolean;
-      Component : Candle_Component;
       Open      : Float;
       High      : Float;
       Low       : Float;
@@ -46,14 +46,19 @@ procedure Mutantsolver is
       Time      : rt.Time;
    end record;
 
+   unmapped_json_array : json.JSON_Array;
+
 begin
    --  setup provider
    Util.Http.Clients.Curl.Register;
 
    --  start block that should be a separate function
    declare
-      http     : Util.Http.Clients.Client;
-      response : Util.Http.Clients.Response;
+      http        : Util.Http.Clients.Client;
+      response    : Util.Http.Clients.Response;
+      ask_candles : array (1 .. count) of Candle;
+      mid_candles : array (1 .. count) of Candle;
+      bid_candles : array (1 .. count) of Candle;
    begin
       --  setup headers
       http.Add_Header ("Content-Type", "application/json");
@@ -69,6 +74,19 @@ begin
       --  print to screen for now what the URL should look like
       io.Put_Line (response.Get_Body);
       io.Put_Line (constructed_url);
+      unmapped_json_array := json.Read (response.Get_Body).Get("candles");
+      declare
+		  current_candle : json.JSON_Value;
+      begin
+         for i in 1..count loop
+			current_candle := json.Array_Element(unmapped_json_array, i);
+            ask_candles (i) :=
+              (Volume   => current_candle.Get ("ask").Get ("volume"),
+               Complete => current_candle.Get ("ask").Get ("complete"));
+
+         end loop;
+      end;
    end;
+
 
 end Mutantsolver;

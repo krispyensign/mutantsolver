@@ -19,3 +19,6 @@ simple_logging = "^1.2.0"
 
 [[depends-on]]
 utilada_curl = "^2.8.0"
+
+[[depends-on]]
+gnatcoll = "^25.0.0"
