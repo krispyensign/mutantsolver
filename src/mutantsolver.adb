@@ -35,13 +35,13 @@ procedure Mutantsolver is
      & fixed.Trim (Count'Image, strings.Both);
 
    type Candle_Component is (Ask, Bid, Mid);
-   type Bucket is record
+   type Candle is record
       Complete  : Boolean;
       Component : Candle_Component;
-      Close     : Float;
+      Open      : Float;
       High      : Float;
       Low       : Float;
-      Open      : Float;
+      Close     : Float;
       Volume    : Integer;
       Time      : rt.Time;
    end record;
@@ -59,6 +59,12 @@ begin
       http.Add_Header ("Content-Type", "application/json");
       http.Add_Header ("Bearer", ubo.To_String (oanda.Token));
       http.Get (constructed_url, response);
+      if response.Get_Status /= 200 then
+         io.Put_Line (response.Get_Body);
+         io.Put_Line (constructed_url);
+         io.Put_Line ("error retrieving candles");
+         return;
+      end if;
 
       --  print to screen for now what the URL should look like
       io.Put_Line (response.Get_Body);
