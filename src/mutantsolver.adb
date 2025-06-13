@@ -7,15 +7,16 @@ with TOML;
 with TOML.File_IO;
 with Util.Http.Clients;
 with Util.Http.Clients.Curl;
+with Util.Dates.ISO8601;
 with Ada.Strings.Fixed;
-with Ada.Real_Time;
+with Ada.Calendar;
 with GNATCOLL.JSON;
 
 procedure Mutantsolver is
    package ubo renames Ada.Strings.Unbounded;
    package fixed renames Ada.Strings.Fixed;
    package strings renames Ada.Strings;
-   package rt renames Ada.Real_Time;
+   package rt renames Ada.Calendar;
    package io renames Ada.Text_IO;
    package json renames GNATCOLL.JSON;
 
@@ -48,6 +49,10 @@ procedure Mutantsolver is
 
    unmapped_json_array : json.JSON_Array;
 
+   ask_candles : array (1 .. count) of Candle;
+   mid_candles : array (1 .. count) of Candle;
+   bid_candles : array (1 .. count) of Candle;
+
 begin
    --  setup provider
    Util.Http.Clients.Curl.Register;
@@ -56,9 +61,6 @@ begin
    declare
       http        : Util.Http.Clients.Client;
       response    : Util.Http.Clients.Response;
-      ask_candles : array (1 .. count) of Candle;
-      mid_candles : array (1 .. count) of Candle;
-      bid_candles : array (1 .. count) of Candle;
    begin
       --  setup headers
       http.Add_Header ("Content-Type", "application/json");
@@ -81,8 +83,13 @@ begin
          for i in 1..count loop
 			current_candle := json.Array_Element(unmapped_json_array, i);
             ask_candles (i) :=
-              (Volume   => current_candle.Get ("ask").Get ("volume"),
-               Complete => current_candle.Get ("ask").Get ("complete"));
+              (Volume   => current_candle.Get ("volume"),
+               Complete => current_candle.Get ("complete"),
+			   Open => float'Value(current_candle.Get("ask").Get("o")),
+			   High => Float'Value(current_candle.Get("ask").Get("h")),
+			   Low => Float'Value(current_candle.Get("ask").Get("l")),
+			   Close => Float'Value(current_candle.Get("ask").Get("c")),
+			   Time => Util.Dates.ISO8601.Value(current_candle.Get("time")));
 
          end loop;
       end;
