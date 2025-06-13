@@ -90,6 +90,22 @@ begin
 			   Low => Float'Value(current_candle.Get("ask").Get("l")),
 			   Close => Float'Value(current_candle.Get("ask").Get("c")),
 			   Time => Util.Dates.ISO8601.Value(current_candle.Get("time")));
+            mid_candles (i) :=
+              (Volume   => current_candle.Get ("volume"),
+               Complete => current_candle.Get ("complete"),
+			   Open => float'Value(current_candle.Get("mid").Get("o")),
+			   High => Float'Value(current_candle.Get("mid").Get("h")),
+			   Low => Float'Value(current_candle.Get("mid").Get("l")),
+			   Close => Float'Value(current_candle.Get("mid").Get("c")),
+			   Time => Util.Dates.ISO8601.Value(current_candle.Get("time")));
+            bid_candles (i) :=
+              (Volume   => current_candle.Get ("volume"),
+               Complete => current_candle.Get ("complete"),
+			   Open => float'Value(current_candle.Get("bid").Get("o")),
+			   High => Float'Value(current_candle.Get("bid").Get("h")),
+			   Low => Float'Value(current_candle.Get("bid").Get("l")),
+			   Close => Float'Value(current_candle.Get("bid").Get("c")),
+			   Time => Util.Dates.ISO8601.Value(current_candle.Get("time")));
 
          end loop;
       end;
