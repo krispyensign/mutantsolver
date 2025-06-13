@@ -15,6 +15,7 @@ procedure Mutantsolver is
    package fixed renames Ada.Strings.Fixed;
    package strings renames Ada.Strings;
    package rt renames Ada.Real_Time;
+   package io renames Ada.Text_IO;
 
    result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
@@ -56,12 +57,12 @@ begin
    begin
       --  setup headers
       http.Add_Header ("Content-Type", "application/json");
-      http.Add_Header ("Bearer", ubo.To_String (Oanda.Token));
+      http.Add_Header ("Bearer", ubo.To_String (oanda.Token));
       http.Get (constructed_url, response);
 
       --  print to screen for now what the URL should look like
-      Ada.Text_IO.Put_Line (response.Get_Body);
-      Ada.Text_IO.Put_Line (constructed_url);
+      io.Put_Line (response.Get_Body);
+      io.Put_Line (constructed_url);
    end;
 
 end Mutantsolver;
