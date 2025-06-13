@@ -32,7 +32,7 @@ procedure Mutantsolver is
      & "/candles?price=MAB&granularity="
      & chart.Granularity
      & "&count="
-     & fixed.Trim (Count'Image, strings.Left);
+     & fixed.Trim (Count'Image, strings.Both);
 
    type Candle_Component is (Ask, Bid, Mid);
    type Bucket is record
