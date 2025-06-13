@@ -27,6 +27,9 @@ procedure Mutantsolver is
      & "&count="
      & Ada.Strings.Fixed.Trim (Count'Image, Ada.Strings.Left);
 
+  type bucket is record
+  end record;
+
 begin
    --  setup provider
    Util.Http.Clients.Curl.Register;
@@ -44,7 +47,7 @@ begin
 
       --  print to screen for now what the URL should look like
       Ada.Text_IO.Put_Line (response.Get_Body);
-      Ada.Text_IO.Put_Line (Constructed_URL);
+      Ada.Text_IO.Put_Line (constructed_url);
    end;
 
 end Mutantsolver;
