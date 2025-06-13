@@ -1,41 +1,109 @@
 pragma Ada_2022;
 
-with AWS.Client;
-with AWS.Headers;
-with AWS.Response;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Config; use Config;
-with Simple_Logging;
 with TOML;
 with TOML.File_IO;
+with Util.Http.Clients;
+with Util.Http.Clients.Curl;
+with Util.Dates.ISO8601;
+with Ada.Strings.Fixed;
+with Ada.Calendar;
+with GNATCOLL.JSON;
 
 procedure Mutantsolver is
-   package Log renames Simple_Logging;
+   package ubo renames Ada.Strings.Unbounded;
+   package fixed renames Ada.Strings.Fixed;
+   package strings renames Ada.Strings;
+   package rt renames Ada.Calendar;
+   package io renames Ada.Text_IO;
+   package json renames GNATCOLL.JSON;
 
-   Result        : constant TOML.Read_Result :=
+   result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
-   Data          : Response.Data;
+   oanda  : constant Oanda_Access := Load_Oanda (result);
+   chart  : constant Chart_Config := Load_Chart_Config (result);
 
-   Local_Headers : Headers.List;
+   --  construct URL to retrieve candles
+   count : constant Integer := (chart.Train_Set_Size + chart.Sample_Set_Size);
 
-   Oanda : Oanda_Access;
-   Chart : Chart_Config;
+   constructed_url : constant String :=
+     ubo.To_String (oanda.URL)
+     & "/v3/instruments/"
+     & chart.Instrument
+     & "/candles?price=MAB&granularity="
+     & chart.Granularity
+     & "&count="
+     & fixed.Trim (count'Image, strings.Both);
+
+   type Candle is record
+      Complete : Boolean;
+      Open     : Float;
+      High     : Float;
+      Low      : Float;
+      Close    : Float;
+      Volume   : Integer;
+      Time     : rt.Time;
+   end record;
+
+   unmapped_json_array : json.JSON_Array;
+
+   ask_candles : array (1 .. count) of Candle;
+   mid_candles : array (1 .. count) of Candle;
+   bid_candles : array (1 .. count) of Candle;
+
+   function make_candle
+     (component : String; current_candle : json.JSON_Value) return Candle;
+   function make_candle
+     (component : String; current_candle : json.JSON_Value) return Candle is
+   begin
+      return
+        (Volume   => current_candle.Get ("volume"),
+         Complete => current_candle.Get ("complete"),
+         Open     => float'Value (current_candle.Get (component).Get ("o")),
+         High     => Float'Value (current_candle.Get (component).Get ("h")),
+         Low      => Float'Value (current_candle.Get (component).Get ("l")),
+         Close    => Float'Value (current_candle.Get (component).Get ("c")),
+         Time     => Util.Dates.ISO8601.Value (current_candle.Get ("time")));
+   end make_candle;
 
 begin
-   Check_Load_Config_Result (Result);
-   Oanda := Load_Oanda (Result);
-   Chart := Load_Chart_Config (Result);
+   --  setup provider
+   Util.Http.Clients.Curl.Register;
 
-   Local_Headers.Add ("Content-Type", "application/json");
-   Local_Headers.Add ("Bearer", Unbounded.To_String (Oanda.Token));
-   Data :=
-     Client.Get
-       (URL =>
-          Unbounded.To_String (Oanda.URL)
-          & "/v3/instruments/"
-          & Chart.Instrument
-          & "/candles?price=MAB&granularity="
-          & Chart.Granularity);
-   Text_IO.Put (Response.Message_Body (Data));
+   --  start block that should be a separate function
+   declare
+      http     : Util.Http.Clients.Client;
+      response : Util.Http.Clients.Response;
+   begin
+      --  setup headers
+      http.Add_Header ("Content-Type", "application/json");
+      http.Add_Header ("Bearer", ubo.To_String (oanda.Token));
+      http.Get (constructed_url, response);
+      if response.Get_Status /= 200 then
+         io.Put_Line (response.Get_Body);
+         io.Put_Line (constructed_url);
+         io.Put_Line ("error retrieving candles");
+         return;
+      end if;
+
+      --  print to screen for now what the URL should look like
+      io.Put_Line (response.Get_Body);
+      io.Put_Line (constructed_url);
+      unmapped_json_array := json.Read (response.Get_Body).Get ("candles");
+      declare
+         current_candle : json.JSON_Value;
+      begin
+         for i in 1 .. count loop
+            current_candle := json.Array_Element (unmapped_json_array, i);
+            ask_candles (i) := make_candle ("ask", current_candle);
+            mid_candles (i) := make_candle ("mid", current_candle);
+            bid_candles (i) := make_candle ("bid", current_candle);
+
+         end loop;
+      end;
+   end;
+
+
 end Mutantsolver;
