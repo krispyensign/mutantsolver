@@ -1,41 +1,50 @@
 pragma Ada_2022;
 
-with AWS.Client;
-with AWS.Headers;
-with AWS.Response;
 with Ada.Strings.Unbounded;
 with Ada.Text_IO;
 with Config; use Config;
-with Simple_Logging;
 with TOML;
 with TOML.File_IO;
+with Util.Http.Clients;
+with Util.Http.Clients.Curl;
+with Ada.Strings.Fixed;
 
 procedure Mutantsolver is
-   package Log renames Simple_Logging;
-
-   Result        : constant TOML.Read_Result :=
+   result          : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
-   Data          : Response.Data;
+   oanda           : constant Oanda_Access := Load_Oanda (result);
+   chart           : constant Chart_Config := Load_Chart_Config (result);
 
-   Local_Headers : Headers.List;
-
-   Oanda : Oanda_Access;
-   Chart : Chart_Config;
+   --  construct URL to retrieve candles
+   count           : constant Integer :=
+     (chart.Train_Set_Size + chart.Sample_Set_Size);
+   constructed_url : constant String :=
+     Ada.Strings.Unbounded.To_String (oanda.URL)
+     & "/v3/instruments/"
+     & chart.Instrument
+     & "/candles?price=MAB&granularity="
+     & chart.Granularity
+     & "&count="
+     & Ada.Strings.Fixed.Trim (Count'Image, Ada.Strings.Left);
 
 begin
-   Check_Load_Config_Result (Result);
-   Oanda := Load_Oanda (Result);
-   Chart := Load_Chart_Config (Result);
+   --  setup provider
+   Util.Http.Clients.Curl.Register;
 
-   Local_Headers.Add ("Content-Type", "application/json");
-   Local_Headers.Add ("Bearer", Unbounded.To_String (Oanda.Token));
-   Data :=
-     Client.Get
-       (URL =>
-          Unbounded.To_String (Oanda.URL)
-          & "/v3/instruments/"
-          & Chart.Instrument
-          & "/candles?price=MAB&granularity="
-          & Chart.Granularity);
-   Text_IO.Put (Response.Message_Body (Data));
+   --  start block that should be a separate function
+   declare
+      http     : Util.Http.Clients.Client;
+      response : Util.Http.Clients.Response;
+   begin
+      --  setup headers
+      http.Add_Header ("Content-Type", "application/json");
+      http.Add_Header
+        ("Bearer", Ada.Strings.Unbounded.To_String (Oanda.Token));
+      http.Get (constructed_url, response);
+
+      --  print to screen for now what the URL should look like
+      Ada.Text_IO.Put_Line (response.Get_Body);
+      Ada.Text_IO.Put_Line (Constructed_URL);
+   end;
+
 end Mutantsolver;

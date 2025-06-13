@@ -12,13 +12,10 @@ tags = []
 executables = ["mutantsolver"]
 
 [[depends-on]]
-aws = "^24.0.0"
+ada_toml = "~0.5.0"
 
 [[depends-on]]
 simple_logging = "^1.2.0"
 
 [[depends-on]]
-gnatcoll = "^24.0.0"
-
-[[depends-on]]
-ada_toml = "~0.5.0"
+utilada_curl = "^2.8.0"
