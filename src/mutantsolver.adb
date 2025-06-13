@@ -10,16 +10,17 @@ with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
 
 procedure Mutantsolver is
-   result          : constant TOML.Read_Result :=
+   package ubo renames Ada.Strings.Unbounded;
+   result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
-   oanda           : constant Oanda_Access := Load_Oanda (result);
-   chart           : constant Chart_Config := Load_Chart_Config (result);
+   oanda  : constant Oanda_Access := Load_Oanda (result);
+   chart  : constant Chart_Config := Load_Chart_Config (result);
 
    --  construct URL to retrieve candles
    count           : constant Integer :=
      (chart.Train_Set_Size + chart.Sample_Set_Size);
    constructed_url : constant String :=
-     Ada.Strings.Unbounded.To_String (oanda.URL)
+     ubo.To_String (oanda.URL)
      & "/v3/instruments/"
      & chart.Instrument
      & "/candles?price=MAB&granularity="
@@ -27,8 +28,8 @@ procedure Mutantsolver is
      & "&count="
      & Ada.Strings.Fixed.Trim (Count'Image, Ada.Strings.Left);
 
-  type bucket is record
-  end record;
+   type bucket is record
+   end record;
 
 begin
    --  setup provider
@@ -41,8 +42,7 @@ begin
    begin
       --  setup headers
       http.Add_Header ("Content-Type", "application/json");
-      http.Add_Header
-        ("Bearer", Ada.Strings.Unbounded.To_String (Oanda.Token));
+      http.Add_Header ("Bearer", ubo.To_String (Oanda.Token));
       http.Get (constructed_url, response);
 
       --  print to screen for now what the URL should look like
