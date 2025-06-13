@@ -38,13 +38,13 @@ procedure Mutantsolver is
      & fixed.Trim (count'Image, strings.Both);
 
    type Candle is record
-      Complete  : Boolean;
-      Open      : Float;
-      High      : Float;
-      Low       : Float;
-      Close     : Float;
-      Volume    : Integer;
-      Time      : rt.Time;
+      Complete : Boolean;
+      Open     : Float;
+      High     : Float;
+      Low      : Float;
+      Close    : Float;
+      Volume   : Integer;
+      Time     : rt.Time;
    end record;
 
    unmapped_json_array : json.JSON_Array;
@@ -59,8 +59,8 @@ begin
 
    --  start block that should be a separate function
    declare
-      http        : Util.Http.Clients.Client;
-      response    : Util.Http.Clients.Response;
+      http     : Util.Http.Clients.Client;
+      response : Util.Http.Clients.Response;
    begin
       --  setup headers
       http.Add_Header ("Content-Type", "application/json");
@@ -76,36 +76,39 @@ begin
       --  print to screen for now what the URL should look like
       io.Put_Line (response.Get_Body);
       io.Put_Line (constructed_url);
-      unmapped_json_array := json.Read (response.Get_Body).Get("candles");
+      unmapped_json_array := json.Read (response.Get_Body).Get ("candles");
       declare
-		  current_candle : json.JSON_Value;
+         current_candle : json.JSON_Value;
       begin
-         for i in 1..count loop
-			current_candle := json.Array_Element(unmapped_json_array, i);
+         for i in 1 .. count loop
+            current_candle := json.Array_Element (unmapped_json_array, i);
             ask_candles (i) :=
               (Volume   => current_candle.Get ("volume"),
                Complete => current_candle.Get ("complete"),
-			   Open => float'Value(current_candle.Get("ask").Get("o")),
-			   High => Float'Value(current_candle.Get("ask").Get("h")),
-			   Low => Float'Value(current_candle.Get("ask").Get("l")),
-			   Close => Float'Value(current_candle.Get("ask").Get("c")),
-			   Time => Util.Dates.ISO8601.Value(current_candle.Get("time")));
+               Open     => float'Value (current_candle.Get ("ask").Get ("o")),
+               High     => Float'Value (current_candle.Get ("ask").Get ("h")),
+               Low      => Float'Value (current_candle.Get ("ask").Get ("l")),
+               Close    => Float'Value (current_candle.Get ("ask").Get ("c")),
+               Time     =>
+                 Util.Dates.ISO8601.Value (current_candle.Get ("time")));
             mid_candles (i) :=
               (Volume   => current_candle.Get ("volume"),
                Complete => current_candle.Get ("complete"),
-			   Open => float'Value(current_candle.Get("mid").Get("o")),
-			   High => Float'Value(current_candle.Get("mid").Get("h")),
-			   Low => Float'Value(current_candle.Get("mid").Get("l")),
-			   Close => Float'Value(current_candle.Get("mid").Get("c")),
-			   Time => Util.Dates.ISO8601.Value(current_candle.Get("time")));
+               Open     => float'Value (current_candle.Get ("mid").Get ("o")),
+               High     => Float'Value (current_candle.Get ("mid").Get ("h")),
+               Low      => Float'Value (current_candle.Get ("mid").Get ("l")),
+               Close    => Float'Value (current_candle.Get ("mid").Get ("c")),
+               Time     =>
+                 Util.Dates.ISO8601.Value (current_candle.Get ("time")));
             bid_candles (i) :=
               (Volume   => current_candle.Get ("volume"),
                Complete => current_candle.Get ("complete"),
-			   Open => float'Value(current_candle.Get("bid").Get("o")),
-			   High => Float'Value(current_candle.Get("bid").Get("h")),
-			   Low => Float'Value(current_candle.Get("bid").Get("l")),
-			   Close => Float'Value(current_candle.Get("bid").Get("c")),
-			   Time => Util.Dates.ISO8601.Value(current_candle.Get("time")));
+               Open     => float'Value (current_candle.Get ("bid").Get ("o")),
+               High     => Float'Value (current_candle.Get ("bid").Get ("h")),
+               Low      => Float'Value (current_candle.Get ("bid").Get ("l")),
+               Close    => Float'Value (current_candle.Get ("bid").Get ("c")),
+               Time     =>
+                 Util.Dates.ISO8601.Value (current_candle.Get ("time")));
 
          end loop;
       end;
