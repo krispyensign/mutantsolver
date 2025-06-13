@@ -8,6 +8,7 @@ with TOML.File_IO;
 with Util.Http.Clients;
 with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
+with Ada.Real_Time;
 
 procedure Mutantsolver is
    package ubo renames Ada.Strings.Unbounded;
@@ -28,7 +29,16 @@ procedure Mutantsolver is
      & "&count="
      & Ada.Strings.Fixed.Trim (Count'Image, Ada.Strings.Left);
 
-   type bucket is record
+   type Candle_Component is (ask, bid, mid);
+   type Bucket is record
+	  Complete: Boolean;
+	  Component: Candle_Component;
+	  Close: Float;
+	  High: Float;
+	  Low: Float;
+	  Open: Float;
+	  Volume: Integer;
+	  Time: Ada.Real_Time.Time;
    end record;
 
 begin
