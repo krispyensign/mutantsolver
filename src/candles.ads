@@ -3,7 +3,7 @@ with Ada.Calendar;
 with GNATCOLL.JSON;
 
 package candles is
-   package rt renames Ada.Calendar;
+   package calendar renames Ada.Calendar;
    package json renames GNATCOLL.JSON;
 
    type Candle is record
@@ -39,20 +39,20 @@ package candles is
       HA_Ask_Close : Float;
 
       Volume : Integer;
-      Time   : rt.Time;
+      Time   : calendar.Time;
    end record;
 
    type Candles_Frame is array (Positive range <>) of Candle;
 
-   function construct_url
+   function Construct_URL
      (oanda : Oanda_Access; chart : Chart_Config) return String;
 
-   function make_candle
+   function Make_Candle
      (current_candle : json.JSON_Value; previous_candle : Candle)
       return Candle;
-   function make_candle (current_candle : json.JSON_Value) return Candle;
+   function Make_Candle (current_candle : json.JSON_Value) return Candle;
 
-   function fetch_candles
+   function Fetch_Candles
      (oanda : Oanda_Access; chart : Chart_Config) return Candles_Frame;
 
 end candles;

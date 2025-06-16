@@ -11,7 +11,7 @@ package body candles is
    package strings renames Ada.Strings;
    package io renames Ada.Text_IO;
 
-   function Construct_url
+   function Construct_URL
      (oanda : Oanda_Access; chart : Chart_Config) return String
    is
       count           : constant Integer :=
@@ -26,9 +26,9 @@ package body candles is
         & fixed.Trim (count'Image, strings.Both);
    begin
       return constructed_url;
-   end Construct_url;
+   end Construct_URL;
 
-   function make_candle
+   function Make_Candle
      (current_candle : json.JSON_Value; previous_candle : Candle) return Candle
    is
       Ask_Open  : constant Float :=
@@ -88,9 +88,9 @@ package body candles is
          HA_Bid_Close => (Bid_Open + Bid_High + Bid_Low + Bid_Close) / 4.0,
          Time         =>
            Util.Dates.ISO8601.Value (current_candle.Get ("time")));
-   end make_candle;
+   end Make_Candle;
 
-   function make_candle (current_candle : json.JSON_Value) return Candle is
+   function Make_Candle (current_candle : json.JSON_Value) return Candle is
       Ask_Open  : constant Float :=
         Float'Value (current_candle.Get ("ask").Get ("o"));
       Ask_High  : constant Float :=
@@ -145,8 +145,9 @@ package body candles is
          HA_Bid_Close => (Bid_Open + Bid_High + Bid_Low + Bid_Close) / 4.0,
          Time         =>
            Util.Dates.ISO8601.Value (current_candle.Get ("time")));
-   end make_candle;
-   function fetch_candles
+   end Make_Candle;
+
+   function Fetch_Candles
      (oanda : Oanda_Access; chart : Chart_Config) return Candles_Frame
    is
       unmapped_json_array : json.JSON_Array;
@@ -159,7 +160,7 @@ package body candles is
       declare
          http            : Util.Http.Clients.Client;
          response        : Util.Http.Clients.Response;
-         constructed_url : constant String := construct_url (oanda, chart);
+         constructed_url : constant String := Construct_URL (oanda, chart);
       begin
          --  setup headers
          http.Add_Header ("Content-Type", "application/json");
@@ -178,14 +179,14 @@ package body candles is
          unmapped_json_array := json.Read (response.Get_Body).Get ("candles");
       end;
       out_candles (1) :=
-        make_candle (json.Array_Element (unmapped_json_array, 1));
+        Make_Candle (json.Array_Element (unmapped_json_array, 1));
       for i in 2 .. count loop
          out_candles (i) :=
-           make_candle (json.Array_Element (unmapped_json_array, i));
+           Make_Candle (json.Array_Element (unmapped_json_array, i));
       end loop;
 
       return out_candles;
 
-   end fetch_candles;
+   end Fetch_Candles;
 
 end candles;
