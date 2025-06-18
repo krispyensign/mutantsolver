@@ -17,6 +17,11 @@ procedure Mutantsolver is
    count : constant Integer := (chart.Train_Set_Size + chart.Sample_Set_Size);
 
    fetched_candles : Core.Candles_Frame (1 .. count);
+   ha_candles : Core.HA_Candle_Frame (1 .. count);
 begin
    fetched_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
+   ha_candles(1) := Core.Make_HA_Candle(fetched_candles(1), fetched_candles(1));
+   for i in 2 .. count loop
+      ha_candles(i) := Core.Make_HA_Candle(fetched_candles(i), fetched_candles(i-1));
+   end loop;
 end Mutantsolver;
