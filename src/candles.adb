@@ -174,26 +174,19 @@ package body candles is
 
    end Make_Candle;
 
-   function Fetch_Candles
-     (oanda : Oanda_Access; chart : Chart_Config) return Candles_Frame
-   is
-      unmapped_json_array : json.JSON_Array;
-      count               : constant Integer :=
-        chart.Sample_Set_Size + chart.Train_Set_Size;
-      out_candles         : Candles_Frame (0 .. count);
-
+   function Fetch_Candle_Data
+     (token : String; constructed_url : String) return json.JSON_Array is
    begin
       --  fetch the candles
       Util.Http.Clients.Curl.Register;
       declare
-         http            : Util.Http.Clients.Client;
-         response        : Util.Http.Clients.Response;
-         constructed_url : constant String := Construct_URL (oanda, chart);
+         http     : Util.Http.Clients.Client;
+         response : Util.Http.Clients.Response;
 
       begin
          --  setup headers
          http.Add_Header ("Content-Type", "application/json");
-         http.Add_Header ("Bearer", ubo.To_String (oanda.Token));
+         http.Add_Header ("Bearer", token);
          http.Get (constructed_url, response);
          if response.Get_Status /= 200 then
             io.Put_Line (response.Get_Body);
@@ -205,9 +198,23 @@ package body candles is
          --  print to screen for now what the URL should look like
          io.Put_Line (response.Get_Body);
          io.Put_Line (constructed_url);
-         unmapped_json_array := json.Read (response.Get_Body).Get ("candles");
-      end;
 
+         return json.Read (response.Get_Body).Get ("candles");
+      end;
+   end Fetch_Candle_Data;
+
+   function Fetch_Candles
+     (oanda : Oanda_Access; chart : Chart_Config) return Candles_Frame
+   is
+      unmapped_json_array : json.JSON_Array;
+      count               : constant Integer :=
+        chart.Sample_Set_Size + chart.Train_Set_Size;
+      out_candles         : Candles_Frame (0 .. count);
+      constructed_url     : constant String := Construct_URL (oanda, chart);
+
+   begin
+      unmapped_json_array :=
+        Fetch_Candle_Data (ubo.To_String (oanda.Token), constructed_url);
       out_candles (1) :=
         Make_Candle (json.Array_Element (unmapped_json_array, 1));
       for i in 2 .. count loop

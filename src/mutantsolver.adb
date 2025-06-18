@@ -17,5 +17,5 @@ procedure Mutantsolver is
 
    fetched_candles : candles.Candles_Frame (1 .. count);
 begin
-   fetched_candles := candles.fetch_candles (oanda, chart);
+   fetched_candles := candles.Fetch_Candles (oanda, chart);
 end Mutantsolver;

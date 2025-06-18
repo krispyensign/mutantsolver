@@ -56,4 +56,6 @@ package candles is
    function Fetch_Candles
      (oanda : Oanda_Access; chart : Chart_Config) return Candles_Frame;
 
+   function Fetch_Candle_Data
+     (token : String; constructed_url : String) return json.JSON_Array;
 end candles;
