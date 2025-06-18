@@ -6,7 +6,7 @@ with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
 with Ada.Calendar.Conversions;
 
-package body candles is
+package body Candles is
    package ubo renames Ada.Strings.Unbounded;
    package fixed renames Ada.Strings.Fixed;
    package strings renames Ada.Strings;
@@ -14,7 +14,7 @@ package body candles is
    package conversions renames Ada.Calendar.Conversions;
 
    function Construct_URL
-     (oanda : Oanda_Access; chart : Chart_Config) return String
+     (oanda : Config.Oanda_Access; chart : Config.Chart_Config) return String
    is
       count           : constant Integer :=
         chart.Sample_Set_Size + chart.Train_Set_Size;
@@ -31,147 +31,38 @@ package body candles is
    end Construct_URL;
 
    function Construct_URL
-     (oanda : Oanda_Access; chart : Chart_Config; from_time : calendar.Time)
-      return String
+     (oanda     : Config.Oanda_Access;
+      chart     : Config.Chart_Config;
+      from_time : calendar.Time) return String
    is
-      count : constant Integer := chart.Sample_Set_Size + chart.Train_Set_Size;
-
-      seconds : constant Long_Long_Integer :=
+      seconds         : constant Long_Long_Integer :=
         Long_Long_Integer (conversions.To_Unix_Time_64 (from_time));
-
       constructed_url : constant String :=
-        ubo.To_String (oanda.URL)
-        & "/v3/instruments/"
-        & chart.Instrument
-        & "/candles?price=MAB&granularity="
-        & chart.Granularity
-        & "&count="
-        & fixed.Trim (count'Image, strings.Both)
-        & "&from="
+        Construct_URL (oanda, chart)
         & fixed.Trim (seconds'Image, strings.Both);
    begin
       return constructed_url;
    end Construct_URL;
 
-   function Make_Candle
-     (current_candle : json.JSON_Value; previous_candle : Candle) return Candle
+   function Make_Candle (current_candle : json.JSON_Value) return Core.Candle
    is
-      Ask_Open  : constant Float :=
-        Float'Value (current_candle.Get ("ask").Get ("o"));
-      Ask_High  : constant Float :=
-        Float'Value (current_candle.Get ("ask").Get ("h"));
-      Ask_Low   : constant Float :=
-        Float'Value (current_candle.Get ("ask").Get ("l"));
-      Ask_Close : constant Float :=
-        Float'Value (current_candle.Get ("ask").Get ("c"));
-      Mid_Open  : constant Float :=
-        Float'Value (current_candle.Get ("mid").Get ("o"));
-      Mid_High  : constant Float :=
-        Float'Value (current_candle.Get ("mid").Get ("h"));
-      Mid_Low   : constant Float :=
-        Float'Value (current_candle.Get ("mid").Get ("l"));
-      Mid_Close : constant Float :=
-        Float'Value (current_candle.Get ("mid").Get ("c"));
-      Bid_Open  : constant Float :=
-        Float'Value (current_candle.Get ("bid").Get ("o"));
-      Bid_High  : constant Float :=
-        Float'Value (current_candle.Get ("bid").Get ("h"));
-      Bid_Low   : constant Float :=
-        Float'Value (current_candle.Get ("bid").Get ("l"));
-      Bid_Close : constant Float :=
-        Float'Value (current_candle.Get ("bid").Get ("c"));
    begin
       return
-        (Volume       => current_candle.Get ("volume"),
-         Complete     => current_candle.Get ("complete"),
-         Ask_Open     => Ask_Open,
-         Ask_High     => Ask_High,
-         Ask_Low      => Ask_Low,
-         Ask_Close    => Ask_Close,
-         Mid_Open     => Mid_Open,
-         Mid_High     => Mid_High,
-         Mid_Low      => Mid_Low,
-         Mid_Close    => Mid_Close,
-         Bid_Open     => Bid_Open,
-         Bid_High     => Bid_High,
-         Bid_Low      => Bid_Low,
-         Bid_Close    => Bid_Close,
-         HA_Ask_Open  =>
-           (previous_candle.Ask_Open + previous_candle.Ask_Close) / 2.0,
-         HA_Ask_High  => Float'Max (Float'Max (Ask_Open, Ask_Close), Ask_High),
-         HA_Ask_Low   => Float'Max (Float'Max (Ask_Open, Ask_Close), Ask_Low),
-         HA_Ask_Close => (Ask_Open + Ask_High + Ask_Low + Ask_Close) / 4.0,
-         HA_Mid_Open  =>
-           (previous_candle.Mid_Open + previous_candle.Mid_Close) / 2.0,
-         HA_Mid_High  => Float'Max (Float'Max (Mid_Open, Mid_Close), Mid_High),
-         HA_Mid_Low   => Float'Max (Float'Max (Mid_Open, Mid_Close), Mid_Low),
-         HA_Mid_Close => (Mid_Open + Mid_High + Mid_Low + Mid_Close) / 4.0,
-         HA_Bid_Open  =>
-           (previous_candle.Bid_Open + previous_candle.Bid_Close) / 2.0,
-         HA_Bid_High  => Float'Max (Float'Max (Bid_Open, Bid_Close), Bid_High),
-         HA_Bid_Low   => Float'Max (Float'Max (Bid_Open, Bid_Close), Bid_Low),
-         HA_Bid_Close => (Bid_Open + Bid_High + Bid_Low + Bid_Close) / 4.0,
-         Time         =>
-           Util.Dates.ISO8601.Value (current_candle.Get ("time")));
-
-   end Make_Candle;
-
-   function Make_Candle (current_candle : json.JSON_Value) return Candle is
-      Ask_Open  : constant Float :=
-        Float'Value (current_candle.Get ("ask").Get ("o"));
-      Ask_High  : constant Float :=
-        Float'Value (current_candle.Get ("ask").Get ("h"));
-      Ask_Low   : constant Float :=
-        Float'Value (current_candle.Get ("ask").Get ("l"));
-      Ask_Close : constant Float :=
-        Float'Value (current_candle.Get ("ask").Get ("c"));
-      Mid_Open  : constant Float :=
-        Float'Value (current_candle.Get ("mid").Get ("o"));
-      Mid_High  : constant Float :=
-        Float'Value (current_candle.Get ("mid").Get ("h"));
-      Mid_Low   : constant Float :=
-        Float'Value (current_candle.Get ("mid").Get ("l"));
-      Mid_Close : constant Float :=
-        Float'Value (current_candle.Get ("mid").Get ("c"));
-      Bid_Open  : constant Float :=
-        Float'Value (current_candle.Get ("bid").Get ("o"));
-      Bid_High  : constant Float :=
-        Float'Value (current_candle.Get ("bid").Get ("h"));
-      Bid_Low   : constant Float :=
-        Float'Value (current_candle.Get ("bid").Get ("l"));
-      Bid_Close : constant Float :=
-        Float'Value (current_candle.Get ("bid").Get ("c"));
-   begin
-      return
-        (Volume       => current_candle.Get ("volume"),
-         Complete     => current_candle.Get ("complete"),
-         Ask_Open     => Ask_Open,
-         Ask_High     => Ask_High,
-         Ask_Low      => Ask_Low,
-         Ask_Close    => Ask_Close,
-         Mid_Open     => Mid_Open,
-         Mid_High     => Mid_High,
-         Mid_Low      => Mid_Low,
-         Mid_Close    => Mid_Close,
-         Bid_Open     => Bid_Open,
-         Bid_High     => Bid_High,
-         Bid_Low      => Bid_Low,
-         Bid_Close    => Bid_Close,
-         HA_Ask_Open  => (Ask_Open + Ask_Close) / 2.0,
-         HA_Ask_High  => Float'Max (Float'Max (Ask_Open, Ask_Close), Ask_High),
-         HA_Ask_Low   => Float'Max (Float'Max (Ask_Open, Ask_Close), Ask_Low),
-         HA_Ask_Close => (Ask_Open + Ask_High + Ask_Low + Ask_Close) / 4.0,
-         HA_Mid_Open  => (Mid_Open + Mid_Close) / 2.0,
-         HA_Mid_High  => Float'Max (Float'Max (Mid_Open, Mid_Close), Mid_High),
-         HA_Mid_Low   => Float'Max (Float'Max (Mid_Open, Mid_Close), Mid_Low),
-         HA_Mid_Close => (Mid_Open + Mid_High + Mid_Low + Mid_Close) / 4.0,
-         HA_Bid_Open  => (Bid_Open + Bid_Close) / 2.0,
-         HA_Bid_High  => Float'Max (Float'Max (Bid_Open, Bid_Close), Bid_High),
-         HA_Bid_Low   => Float'Max (Float'Max (Bid_Open, Bid_Close), Bid_Low),
-         HA_Bid_Close => (Bid_Open + Bid_High + Bid_Low + Bid_Close) / 4.0,
-         Time         =>
-           Util.Dates.ISO8601.Value (current_candle.Get ("time")));
-
+        (Volume    => current_candle.Get ("volume"),
+         Complete  => current_candle.Get ("complete"),
+         Ask_Open  => Float'Value (current_candle.Get ("ask").Get ("o")),
+         Ask_High  => Float'Value (current_candle.Get ("ask").Get ("h")),
+         Ask_Low   => Float'Value (current_candle.Get ("ask").Get ("l")),
+         Ask_Close => Float'Value (current_candle.Get ("ask").Get ("c")),
+         Mid_Open  => Float'Value (current_candle.Get ("mid").Get ("o")),
+         Mid_High  => Float'Value (current_candle.Get ("mid").Get ("h")),
+         Mid_Low   => Float'Value (current_candle.Get ("mid").Get ("l")),
+         Mid_Close => Float'Value (current_candle.Get ("mid").Get ("c")),
+         Bid_Open  => Float'Value (current_candle.Get ("bid").Get ("o")),
+         Bid_High  => Float'Value (current_candle.Get ("bid").Get ("h")),
+         Bid_Low   => Float'Value (current_candle.Get ("bid").Get ("l")),
+         Bid_Close => Float'Value (current_candle.Get ("bid").Get ("c")),
+         Time      => Util.Dates.ISO8601.Value (current_candle.Get ("time")));
    end Make_Candle;
 
    function Fetch_Candle_Data
@@ -204,20 +95,19 @@ package body candles is
    end Fetch_Candle_Data;
 
    function Fetch_Candles
-     (oanda : Oanda_Access; chart : Chart_Config) return Candles_Frame
+     (oanda : Config.Oanda_Access; chart : Config.Chart_Config)
+      return Core.Candles_Frame
    is
       unmapped_json_array : json.JSON_Array;
       count               : constant Integer :=
         chart.Sample_Set_Size + chart.Train_Set_Size;
-      out_candles         : Candles_Frame (0 .. count);
+      out_candles         : Core.Candles_Frame (1 .. count);
       constructed_url     : constant String := Construct_URL (oanda, chart);
 
    begin
       unmapped_json_array :=
         Fetch_Candle_Data (ubo.To_String (oanda.Token), constructed_url);
-      out_candles (1) :=
-        Make_Candle (json.Array_Element (unmapped_json_array, 1));
-      for i in 2 .. count loop
+      for i in 1 .. count loop
          out_candles (i) :=
            Make_Candle (json.Array_Element (unmapped_json_array, i));
       end loop;
@@ -226,4 +116,4 @@ package body candles is
 
    end Fetch_Candles;
 
-end candles;
+end Candles;
