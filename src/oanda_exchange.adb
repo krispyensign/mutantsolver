@@ -46,7 +46,9 @@ package body Oanda_Exchange is
 
    function Make_Candle (current_candle : json.JSON_Value) return Core.Candle
    is
+      temp_string : ubo.Unbounded_String := current_candle.Get ("time");
    begin
+      temp_string := ubo.Replace_Slice (temp_string, 20, 30, "Z");
       return
         (Volume    => current_candle.Get ("volume"),
          Complete  => current_candle.Get ("complete"),
@@ -62,7 +64,7 @@ package body Oanda_Exchange is
          Bid_High  => Float'Value (current_candle.Get ("bid").Get ("h")),
          Bid_Low   => Float'Value (current_candle.Get ("bid").Get ("l")),
          Bid_Close => Float'Value (current_candle.Get ("bid").Get ("c")),
-         Time      => Util.Dates.ISO8601.Value (current_candle.Get ("time")));
+         Time      => Util.Dates.ISO8601.Value (ubo.To_String (temp_string)));
    end Make_Candle;
 
    function Fetch_Candle_Data
@@ -77,7 +79,8 @@ package body Oanda_Exchange is
       begin
          --  setup headers
          http.Add_Header ("Content-Type", "application/json");
-         http.Add_Header ("Bearer", token);
+         http.Add_Header ("Authorization", "Bearer " & token);
+         io.Put_Line (token);
          http.Get (constructed_url, response);
          if response.Get_Status /= 200 then
             io.Put_Line (response.Get_Body);
