@@ -50,6 +50,7 @@ package candles is
    function Make_Candle
      (current_candle : json.JSON_Value; previous_candle : Candle)
       return Candle;
+
    function Make_Candle (current_candle : json.JSON_Value) return Candle;
 
    function Fetch_Candles

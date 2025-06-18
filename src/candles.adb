@@ -4,12 +4,14 @@ with Util.Dates.ISO8601;
 with Util.Http.Clients;
 with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
+with Ada.Calendar.Conversions;
 
 package body candles is
    package ubo renames Ada.Strings.Unbounded;
    package fixed renames Ada.Strings.Fixed;
    package strings renames Ada.Strings;
    package io renames Ada.Text_IO;
+   package conversions renames Ada.Calendar.Conversions;
 
    function Construct_URL
      (oanda : Oanda_Access; chart : Chart_Config) return String
@@ -24,6 +26,29 @@ package body candles is
         & chart.Granularity
         & "&count="
         & fixed.Trim (count'Image, strings.Both);
+   begin
+      return constructed_url;
+   end Construct_URL;
+
+   function Construct_URL
+     (oanda : Oanda_Access; chart : Chart_Config; from_time : calendar.Time)
+      return String
+   is
+      count : constant Integer := chart.Sample_Set_Size + chart.Train_Set_Size;
+
+      seconds : constant Long_Long_Integer :=
+        Long_Long_Integer (conversions.To_Unix_Time_64 (from_time));
+
+      constructed_url : constant String :=
+        ubo.To_String (oanda.URL)
+        & "/v3/instruments/"
+        & chart.Instrument
+        & "/candles?price=MAB&granularity="
+        & chart.Granularity
+        & "&count="
+        & fixed.Trim (count'Image, strings.Both)
+        & "&from="
+        & fixed.Trim (seconds'Image, strings.Both);
    begin
       return constructed_url;
    end Construct_URL;
@@ -88,6 +113,7 @@ package body candles is
          HA_Bid_Close => (Bid_Open + Bid_High + Bid_Low + Bid_Close) / 4.0,
          Time         =>
            Util.Dates.ISO8601.Value (current_candle.Get ("time")));
+
    end Make_Candle;
 
    function Make_Candle (current_candle : json.JSON_Value) return Candle is
@@ -145,6 +171,7 @@ package body candles is
          HA_Bid_Close => (Bid_Open + Bid_High + Bid_Low + Bid_Close) / 4.0,
          Time         =>
            Util.Dates.ISO8601.Value (current_candle.Get ("time")));
+
    end Make_Candle;
 
    function Fetch_Candles
@@ -154,6 +181,7 @@ package body candles is
       count               : constant Integer :=
         chart.Sample_Set_Size + chart.Train_Set_Size;
       out_candles         : Candles_Frame (0 .. count);
+
    begin
       --  fetch the candles
       Util.Http.Clients.Curl.Register;
@@ -161,6 +189,7 @@ package body candles is
          http            : Util.Http.Clients.Client;
          response        : Util.Http.Clients.Response;
          constructed_url : constant String := Construct_URL (oanda, chart);
+
       begin
          --  setup headers
          http.Add_Header ("Content-Type", "application/json");
@@ -178,6 +207,7 @@ package body candles is
          io.Put_Line (constructed_url);
          unmapped_json_array := json.Read (response.Get_Body).Get ("candles");
       end;
+
       out_candles (1) :=
         Make_Candle (json.Array_Element (unmapped_json_array, 1));
       for i in 2 .. count loop
