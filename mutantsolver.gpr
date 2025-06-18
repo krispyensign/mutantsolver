@@ -1,7 +1,7 @@
 with "config/mutantsolver_config.gpr";
 project Mutantsolver is
 
-   for Source_Dirs use ("src/", "config/", "src/ta_bindings");
+   for Source_Dirs use ("src/", "config/");
    for Object_Dir use "obj/" & Mutantsolver_Config.Build_Profile;
    for Create_Missing_Dirs use "True";
    for Exec_Dir use "bin";
