@@ -4,7 +4,7 @@ with Config;
 with TOML;
 with TOML.File_IO;
 with Core;
-with Candles;
+with Oanda_Exchange;
 
 procedure Mutantsolver is
 
@@ -18,5 +18,5 @@ procedure Mutantsolver is
 
    fetched_candles : Core.Candles_Frame (1 .. count);
 begin
-   fetched_candles := Candles.Fetch_Candles (oanda, chart);
+   fetched_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
 end Mutantsolver;

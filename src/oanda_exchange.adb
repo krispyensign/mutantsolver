@@ -6,7 +6,7 @@ with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
 with Ada.Calendar.Conversions;
 
-package body Candles is
+package body Oanda_Exchange is
    package ubo renames Ada.Strings.Unbounded;
    package fixed renames Ada.Strings.Fixed;
    package strings renames Ada.Strings;
@@ -116,4 +116,4 @@ package body Candles is
 
    end Fetch_Candles;
 
-end Candles;
+end Oanda_Exchange;
