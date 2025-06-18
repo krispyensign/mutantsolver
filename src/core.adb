@@ -3,7 +3,8 @@ pragma Ada_2022;
 package body Core is
 
    function Make_HA_Candle
-     (current_candle : Candle'Class; previous_candle : Candle'Class) return HA_Candle is
+     (current_candle : Candle'Class; previous_candle : Candle'Class)
+      return HA_Candle is
    begin
       return
         (Volume    => current_candle.Volume,

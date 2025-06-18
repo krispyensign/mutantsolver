@@ -35,7 +35,7 @@ package body Candles is
       chart     : Config.Chart_Config;
       from_time : calendar.Time) return String
    is
-      seconds : constant Long_Long_Integer :=
+      seconds         : constant Long_Long_Integer :=
         Long_Long_Integer (conversions.To_Unix_Time_64 (from_time));
       constructed_url : constant String :=
         Construct_URL (oanda, chart)

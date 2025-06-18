@@ -30,7 +30,8 @@ package Core is
    type HA_Candle is new Candle_Base with null record;
    type HA_Candle_Frame is array (Positive range <>) of HA_Candle;
    function Make_HA_Candle
-     (current_candle : Candle'Class; previous_candle : Candle'Class) return HA_Candle;
+     (current_candle : Candle'Class; previous_candle : Candle'Class)
+      return HA_Candle;
 
    type WMA_Candle is new Candle_Base with null record;
    type WMA_HA_Candle is new Candle_Base with null record;
