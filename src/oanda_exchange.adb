@@ -75,12 +75,13 @@ package body Oanda_Exchange is
       declare
          http     : Util.Http.Clients.Client;
          response : Util.Http.Clients.Response;
+         candles : json.JSON_Array;
 
       begin
          --  setup headers
          http.Add_Header ("Content-Type", "application/json");
          http.Add_Header ("Authorization", "Bearer " & token);
-         io.Put_Line (token);
+         --  io.Put_Line (token);
          http.Get (constructed_url, response);
          if response.Get_Status /= 200 then
             io.Put_Line (response.Get_Body);
@@ -90,10 +91,12 @@ package body Oanda_Exchange is
          end if;
 
          --  print to screen for now what the URL should look like
-         io.Put_Line (response.Get_Body);
+         --  io.Put_Line (response.Get_Body);
          io.Put_Line (constructed_url);
+         candles := json.Read(response.Get_Body).Get ("candles");
+         io.Put_Line ("candles retrieved: " & json.Length(candles)'Image);
 
-         return json.Read (response.Get_Body).Get ("candles");
+         return candles;
       end;
    end Fetch_Candle_Data;
 
