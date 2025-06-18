@@ -75,7 +75,7 @@ package body Oanda_Exchange is
       declare
          http     : Util.Http.Clients.Client;
          response : Util.Http.Clients.Response;
-         candles : json.JSON_Array;
+         candles  : json.JSON_Array;
 
       begin
          --  setup headers
@@ -93,8 +93,8 @@ package body Oanda_Exchange is
          --  print to screen for now what the URL should look like
          --  io.Put_Line (response.Get_Body);
          io.Put_Line (constructed_url);
-         candles := json.Read(response.Get_Body).Get ("candles");
-         io.Put_Line ("candles retrieved: " & json.Length(candles)'Image);
+         candles := json.Read (response.Get_Body).Get ("candles");
+         io.Put_Line ("candles retrieved: " & json.Length (candles)'Image);
 
          return candles;
       end;
