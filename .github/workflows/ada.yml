@@ -19,12 +19,9 @@ jobs:
 
     - name: alire-project/setup-alire
       uses: alire-project/setup-alire@v4
-
-    - name: Install toolchain
-      run: |
-        alr --non-interactive settings --global --set toolchain.assistant false
-        alr --non-interactive toolchain --select gnat_native
-        alr --non-interactive toolchain --select gprbuild
+      with:
+        version: 2.1.0
+        toolchain: gnat_native gprbuild
 
     - name: Build and run
       run: |
