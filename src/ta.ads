@@ -14,7 +14,13 @@ package TA is
       in_low      : Real_Array;
       in_close    : Real_Array;
       time_period : Integer;
-      out_real    : out Real_Array);
+      out_real    : out Real_Array)
+   with
+     Pre =>
+       in_high'Length = in_low'Length
+       and then in_high'Length = in_close'Length
+       and then time_period < in_high'Length
+       and then time_period > 0;
 
 private
    function TA_ATR

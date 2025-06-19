@@ -27,7 +27,10 @@ package body TA is
            outBegIdx       => out_idx'Address,
            outNBElement    => out_end'Address,
            outReal         => temp'Address);
-      out_real (1 .. out_idx) := [0.0];
+      if result /= 0 then
+         raise Program_Error;
+      end if;
+      out_real (1 .. out_idx) := temp (out_end + 1 .. out_real'Length);
       out_real (out_idx + 1 .. out_real'Length) := temp (1 .. out_end);
    end Calc_TA_ATR;
 end TA;
