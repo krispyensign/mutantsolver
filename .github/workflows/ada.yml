@@ -25,4 +25,6 @@ jobs:
 
     - name: Build and run
       run: |
+        wget https://github.com/TA-Lib/ta-lib/releases/download/v0.6.4/ta-lib_0.6.4_amd64.deb
+        sudo dpkg -i ta-lib_0.6.4_amd64.deb
         alr --non-interactive build

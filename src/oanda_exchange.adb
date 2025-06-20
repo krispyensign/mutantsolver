@@ -6,7 +6,7 @@ with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
 with Ada.Calendar.Conversions;
 
-package body Candles is
+package body Oanda_Exchange is
    package ubo renames Ada.Strings.Unbounded;
    package fixed renames Ada.Strings.Fixed;
    package strings renames Ada.Strings;
@@ -46,23 +46,25 @@ package body Candles is
 
    function Make_Candle (current_candle : json.JSON_Value) return Core.Candle
    is
+      temp_string : ubo.Unbounded_String := current_candle.Get ("time");
    begin
+      temp_string := ubo.Replace_Slice (temp_string, 20, 30, "Z");
       return
         (Volume    => current_candle.Get ("volume"),
          Complete  => current_candle.Get ("complete"),
-         Ask_Open  => Float'Value (current_candle.Get ("ask").Get ("o")),
-         Ask_High  => Float'Value (current_candle.Get ("ask").Get ("h")),
-         Ask_Low   => Float'Value (current_candle.Get ("ask").Get ("l")),
-         Ask_Close => Float'Value (current_candle.Get ("ask").Get ("c")),
-         Mid_Open  => Float'Value (current_candle.Get ("mid").Get ("o")),
-         Mid_High  => Float'Value (current_candle.Get ("mid").Get ("h")),
-         Mid_Low   => Float'Value (current_candle.Get ("mid").Get ("l")),
-         Mid_Close => Float'Value (current_candle.Get ("mid").Get ("c")),
-         Bid_Open  => Float'Value (current_candle.Get ("bid").Get ("o")),
-         Bid_High  => Float'Value (current_candle.Get ("bid").Get ("h")),
-         Bid_Low   => Float'Value (current_candle.Get ("bid").Get ("l")),
-         Bid_Close => Float'Value (current_candle.Get ("bid").Get ("c")),
-         Time      => Util.Dates.ISO8601.Value (current_candle.Get ("time")));
+         Ask_Open  => Long_Float'Value (current_candle.Get ("ask").Get ("o")),
+         Ask_High  => Long_Float'Value (current_candle.Get ("ask").Get ("h")),
+         Ask_Low   => Long_Float'Value (current_candle.Get ("ask").Get ("l")),
+         Ask_Close => Long_Float'Value (current_candle.Get ("ask").Get ("c")),
+         Mid_Open  => Long_Float'Value (current_candle.Get ("mid").Get ("o")),
+         Mid_High  => Long_Float'Value (current_candle.Get ("mid").Get ("h")),
+         Mid_Low   => Long_Float'Value (current_candle.Get ("mid").Get ("l")),
+         Mid_Close => Long_Float'Value (current_candle.Get ("mid").Get ("c")),
+         Bid_Open  => Long_Float'Value (current_candle.Get ("bid").Get ("o")),
+         Bid_High  => Long_Float'Value (current_candle.Get ("bid").Get ("h")),
+         Bid_Low   => Long_Float'Value (current_candle.Get ("bid").Get ("l")),
+         Bid_Close => Long_Float'Value (current_candle.Get ("bid").Get ("c")),
+         Time      => Util.Dates.ISO8601.Value (ubo.To_String (temp_string)));
    end Make_Candle;
 
    function Fetch_Candle_Data
@@ -73,11 +75,13 @@ package body Candles is
       declare
          http     : Util.Http.Clients.Client;
          response : Util.Http.Clients.Response;
+         candles  : json.JSON_Array;
 
       begin
          --  setup headers
          http.Add_Header ("Content-Type", "application/json");
-         http.Add_Header ("Bearer", token);
+         http.Add_Header ("Authorization", "Bearer " & token);
+         --  io.Put_Line (token);
          http.Get (constructed_url, response);
          if response.Get_Status /= 200 then
             io.Put_Line (response.Get_Body);
@@ -87,10 +91,12 @@ package body Candles is
          end if;
 
          --  print to screen for now what the URL should look like
-         io.Put_Line (response.Get_Body);
+         --  io.Put_Line (response.Get_Body);
          io.Put_Line (constructed_url);
+         candles := json.Read (response.Get_Body).Get ("candles");
+         io.Put_Line ("candles retrieved: " & json.Length (candles)'Image);
 
-         return json.Read (response.Get_Body).Get ("candles");
+         return candles;
       end;
    end Fetch_Candle_Data;
 
@@ -116,4 +122,4 @@ package body Candles is
 
    end Fetch_Candles;
 
-end Candles;
+end Oanda_Exchange;

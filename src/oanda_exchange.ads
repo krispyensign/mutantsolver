@@ -4,7 +4,7 @@ with Ada.Calendar;
 with GNATCOLL.JSON;
 with Core;
 
-package Candles is
+package Oanda_Exchange is
    package calendar renames Ada.Calendar;
    package json renames GNATCOLL.JSON;
 
@@ -19,4 +19,4 @@ package Candles is
 
    function Fetch_Candle_Data
      (token : String; constructed_url : String) return json.JSON_Array;
-end Candles;
+end Oanda_Exchange;

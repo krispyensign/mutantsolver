@@ -8,20 +8,20 @@ package Core is
       Complete  : Boolean;
       Time      : calendar.Time;
       Volume    : Integer;
-      Bid_Open  : Float;
-      Bid_High  : Float;
-      Bid_Low   : Float;
-      Bid_Close : Float;
+      Bid_Open  : Long_Float;
+      Bid_High  : Long_Float;
+      Bid_Low   : Long_Float;
+      Bid_Close : Long_Float;
 
-      Mid_Open  : Float;
-      Mid_High  : Float;
-      Mid_Low   : Float;
-      Mid_Close : Float;
+      Mid_Open  : Long_Float;
+      Mid_High  : Long_Float;
+      Mid_Low   : Long_Float;
+      Mid_Close : Long_Float;
 
-      Ask_Open  : Float;
-      Ask_High  : Float;
-      Ask_Low   : Float;
-      Ask_Close : Float;
+      Ask_Open  : Long_Float;
+      Ask_High  : Long_Float;
+      Ask_Low   : Long_Float;
+      Ask_Close : Long_Float;
    end record;
 
    type Candle is new Candle_Base with null record;
