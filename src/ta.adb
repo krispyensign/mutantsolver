@@ -1,8 +1,6 @@
 pragma Ada_2022;
-with Ada.Text_IO;
 
 package body TA is
-   package io renames Ada.Text_IO;
 
    procedure Calc_TA_ATR
      (in_high     : Real_Array;
