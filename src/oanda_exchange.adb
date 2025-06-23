@@ -64,7 +64,8 @@ package body Oanda_Exchange is
          Bid_High  => Long_Float'Value (current_candle.Get ("bid").Get ("h")),
          Bid_Low   => Long_Float'Value (current_candle.Get ("bid").Get ("l")),
          Bid_Close => Long_Float'Value (current_candle.Get ("bid").Get ("c")),
-         Time      => Util.Dates.ISO8601.Value (ubo.To_String (temp_string)));
+         Time      => Util.Dates.ISO8601.Value (ubo.To_String (temp_string)),
+         others    => 0.0);
    end Make_Candle;
 
    function Fetch_Candle_Data
@@ -102,12 +103,12 @@ package body Oanda_Exchange is
 
    function Fetch_Candles
      (oanda : Config.Oanda_Access; chart : Config.Chart_Config)
-      return Core.Candles_Frame
+      return Core.Candles
    is
       unmapped_json_array : json.JSON_Array;
       count               : constant Integer :=
         chart.Sample_Set_Size + chart.Train_Set_Size;
-      out_candles         : Core.Candles_Frame (1 .. count);
+      out_candles         : Core.Candles (1 .. count);
       constructed_url     : constant String := Construct_URL (oanda, chart);
 
    begin

@@ -2,11 +2,9 @@ pragma Ada_2022;
 
 with Interfaces.C;
 with System;
+with common; use common;
 
 package TA is
-
-   type Real_Array is array (Positive range <>) of Long_Float;
-
    function TA_Initialize return Integer
    with Import => True, Convention => C, External_Name => "TA_Initialize";
 
