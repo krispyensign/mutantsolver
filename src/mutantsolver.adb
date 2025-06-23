@@ -21,7 +21,7 @@ procedure Mutantsolver is
    fetched_candles : Core.Candles (1 .. count);
 
    ta_result : Integer := TA.TA_Initialize;
-   atr_calc  : common.Real_Array (1 .. count);
+   calc_result  : common.Real_Array (1 .. count);
 
 begin
    fetched_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
@@ -40,12 +40,21 @@ begin
       in_close    =>
         [for i in fetched_candles'Range => fetched_candles (i).Mid_Close],
       time_period => 20,
-      out_real    => atr_calc);
+      out_real    => calc_result);
 
-   io.Put_Line (atr_calc (atr_calc'Last)'Image);
+   io.Put_Line (calc_result (calc_result'Last)'Image);
 
    for i in 1 .. count loop
-      fetched_candles (i).ATR := atr_calc (i);
+      fetched_candles (i).ATR := calc_result (i);
    end loop;
+
+  TA.Calc_TA_WMA(
+     in_real => [for i in fetched_candles'Range => fetched_candles (i).Ask_Open],
+     time_period => 20,
+     out_real => calc_result);
+  for i in 1 .. count loop
+     fetched_candles (i).WMA_Ask_Open := calc_result (i);
+  end loop;
+
 
 end Mutantsolver;
