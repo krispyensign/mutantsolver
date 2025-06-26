@@ -25,7 +25,7 @@ procedure Mutantsolver is
 
    --  allocate the full data pool on the stack
    full_data_pool : constant Core.Pool_T (Core.Column_Key) :=
-     [for i in Core.Time .. Core.WMA_HA_Ask_Close
+     [for i in Core.Column_Key'First .. Core.Column_Key'Last
       => new Core.Real_Array (1 .. count)];
 
 begin
