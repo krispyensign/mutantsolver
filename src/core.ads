@@ -61,7 +61,7 @@ package Core is
       WMA_HA_Ask_Low,
       WMA_HA_Ask_Close);
 
-   type Pool_T is array (Column_Key range <>) of Real_Array_Ptr;
+   type Pool_T is array (Column_Key range <>, Positive range <>) of Long_Float ;
 
    type Candle_Base is tagged record
       Complete                               : Boolean;
