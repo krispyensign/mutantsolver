@@ -64,8 +64,7 @@ package body Oanda_Exchange is
          Bid_High  => Long_Float'Value (current_candle.Get ("bid").Get ("h")),
          Bid_Low   => Long_Float'Value (current_candle.Get ("bid").Get ("l")),
          Bid_Close => Long_Float'Value (current_candle.Get ("bid").Get ("c")),
-         Time      => Util.Dates.ISO8601.Value (ubo.To_String (temp_string)),
-         others    => 0.0);
+         Time      => Util.Dates.ISO8601.Value (ubo.To_String (temp_string)));
    end Make_Candle;
 
    function Fetch_Candle_Data
