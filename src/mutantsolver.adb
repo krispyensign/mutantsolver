@@ -32,46 +32,76 @@ procedure Mutantsolver is
    --  initialize the Technical analysis library TA-Lib
    ta_result : Integer := TA.TA_Initialize;
 
-   --  allocate the full data pool on the heap
+   --  allocate the full data pool on the heap and apply the retrieved candles
    full_data_pool : constant Core.Pool_T (Core.Column_Key) :=
-     [for i in Core.Column_Key'First .. Core.Column_Key'Last
-      => new Core.Real_Array (1 .. count)];
+     [Core.Ask_Open     =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Ask_Open),
+      Core.Ask_High     =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Ask_High),
+      Core.Ask_Low      =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Ask_Low),
+      Core.Ask_Close    =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Ask_Close),
+      Core.Mid_Open     =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Mid_Open),
+      Core.Mid_High     =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Mid_High),
+      Core.Mid_Low      =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Mid_Low),
+      Core.Mid_Close    =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Mid_Close),
+      Core.Bid_Open     =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Bid_Open),
+      Core.Bid_High     =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Bid_High),
+      Core.Bid_Low      =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Bid_Low),
+      Core.Bid_Close    =>
+        new Core.Real_Array'
+          (for i in 1 .. count => fetched_candles (i).Bid_Close),
+      Core.HA_Ask_Open  =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Ask_Open),
+      Core.HA_Ask_High  =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Ask_High),
+      Core.HA_Ask_Low   =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Ask_Low),
+      Core.HA_Ask_Close =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Ask_Close),
+      Core.HA_Mid_Open  =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Mid_Open),
+      Core.HA_Mid_High  =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Mid_High),
+      Core.HA_Mid_Low   =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Mid_Low),
+      Core.HA_Mid_Close =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Mid_Close),
+      Core.HA_Bid_Open  =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Bid_Open),
+      Core.HA_Bid_High  =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Bid_High),
+      Core.HA_Bid_Low   =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Bid_Low),
+      Core.HA_Bid_Close =>
+        new Core.Real_Array'(for i in 1 .. count => ha_candles (i).Bid_Close),
+      others            => new Core.Real_Array (1 .. count)];
 
 begin
-   --  apply the retrieved candles to the data pool
-   full_data_pool (Core.Ask_Open) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Ask_Open];
-   full_data_pool (Core.Ask_High) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Ask_High];
-   full_data_pool (Core.Ask_Low) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Ask_Low];
-   full_data_pool (Core.Ask_Close) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Ask_Close];
-   full_data_pool (Core.Bid_Open) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Bid_Open];
-   full_data_pool (Core.Bid_High) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Bid_High];
-   full_data_pool (Core.Bid_Low) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Bid_Low];
-   full_data_pool (Core.Bid_Close) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Bid_Close];
-   full_data_pool (Core.Mid_Open) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Mid_Open];
-   full_data_pool (Core.Mid_High) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Mid_High];
-   full_data_pool (Core.Mid_Low) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Mid_Low];
-   full_data_pool (Core.Mid_Close) (1 .. count) :=
-     [for i in fetched_candles'Range => fetched_candles (i).Mid_Close];
-
    --  Calculate the ATR
    TA.Calc_TA_ATR
-     (in_high     =>
-        [for i in fetched_candles'Range => fetched_candles (i).Mid_High],
-      in_low      =>
-        [for i in fetched_candles'Range => fetched_candles (i).Mid_Low],
-      in_close    =>
-        [for i in fetched_candles'Range => fetched_candles (i).Mid_Close],
+     (in_high     => full_data_pool (Core.Mid_High),
+      in_low      => full_data_pool (Core.Mid_Low),
+      in_close    => full_data_pool (Core.Mid_Close),
       time_period => chart.Time_Period_Interval,
       out_real    => full_data_pool (Core.ATR));
 
