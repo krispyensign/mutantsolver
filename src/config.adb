@@ -17,7 +17,7 @@ package body Config is
    begin
       return
         (Time_Period_Interval => 0,
-         -- TODO populate for real life
+         --  TODO populate for real life
          Instrument           => Chart_Root.Get ("instrument").As_String,
          Num_Digits           =>
            Integer (Chart_Root.Get ("digits").As_Integer),

@@ -16,29 +16,53 @@ procedure Mutantsolver is
    chart  : constant Config.Chart_Config := Config.Load_Chart_Config (result);
    count  : constant Integer := (chart.Train_Set_Size + chart.Sample_Set_Size);
 
-   --  allocate candles on the stack
-   fetched_candles : Core.Candles (1 .. count);
-   ha_candles      : Core.HA_Candles (1 .. count);
+   --  fetch the candles and allocate candles on the stack
+   fetched_candles : constant Core.Candles (1 .. count) :=
+     Oanda_Exchange.Fetch_Candles (oanda, chart);
+
+   --  apply the heiken ashi transform
+   ha_candles : constant Core.HA_Candles (1 .. count) :=
+     [for i in fetched_candles'Range
+      => (if i = 1
+          then Core.Make_HA_Candle (fetched_candles (1), fetched_candles (1))
+          else
+            Core.Make_HA_Candle
+              (fetched_candles (i), fetched_candles (i - 1)))];
 
    --  initialize the Technical analysis library TA-Lib
-   ta_result   : Integer := TA.TA_Initialize;
+   ta_result : Integer := TA.TA_Initialize;
 
-   --  allocate the full data pool on the stack
+   --  allocate the full data pool on the heap
    full_data_pool : constant Core.Pool_T (Core.Column_Key) :=
      [for i in Core.Column_Key'First .. Core.Column_Key'Last
       => new Core.Real_Array (1 .. count)];
 
 begin
-   --  fetch the candles from oanda or some other data source
-   fetched_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
-
-   --  Generate the HA candles
-   ha_candles (1) :=
-     Core.Make_HA_Candle (fetched_candles (1), fetched_candles (1));
-   for i in 2 .. count loop
-      ha_candles (i) :=
-        Core.Make_HA_Candle (fetched_candles (i), fetched_candles (i - 1));
-   end loop;
+   --  apply the retrieved candles to the data pool
+   full_data_pool (Core.Ask_Open) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Ask_Open];
+   full_data_pool (Core.Ask_High) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Ask_High];
+   full_data_pool (Core.Ask_Low) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Ask_Low];
+   full_data_pool (Core.Ask_Close) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Ask_Close];
+   full_data_pool (Core.Bid_Open) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Bid_Open];
+   full_data_pool (Core.Bid_High) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Bid_High];
+   full_data_pool (Core.Bid_Low) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Bid_Low];
+   full_data_pool (Core.Bid_Close) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Bid_Close];
+   full_data_pool (Core.Mid_Open) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Mid_Open];
+   full_data_pool (Core.Mid_High) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Mid_High];
+   full_data_pool (Core.Mid_Low) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Mid_Low];
+   full_data_pool (Core.Mid_Close) (1 .. count) :=
+     [for i in fetched_candles'Range => fetched_candles (i).Mid_Close];
 
    --  Calculate the ATR
    TA.Calc_TA_ATR
