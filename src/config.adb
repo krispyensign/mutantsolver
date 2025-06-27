@@ -16,18 +16,18 @@ package body Config is
       Chart_Root : constant TOML.TOML_Value := Result.Value.Get ("chart");
    begin
       return
-        (Time_Period_Interval => 0,
+        (Time_Period_Interval   => 0,
          --  TODO populate for real life
-         Instrument           => Chart_Root.Get ("instrument").As_String,
-         Num_Digits           =>
+         Instrument             => Chart_Root.Get ("instrument").As_String,
+         Num_Digits             =>
            Integer (Chart_Root.Get ("digits").As_Integer),
-         Granularity          => Chart_Root.Get ("granularity").As_String,
-         Train_Set_Size       =>
-           Integer (Chart_Root.Get ("train_set_size").As_Integer),
-         Sample_Set_Size      =>
-           Integer (Chart_Root.Get ("sample_set_size").As_Integer),
-         TP_SL_Train_Set_Size =>
-           Integer (Chart_Root.Get ("tp_sl_train_set_size").As_Integer));
+         Granularity            => Chart_Root.Get ("granularity").As_String,
+         Offline_Set_Size       =>
+           Integer (Chart_Root.Get ("offline_set_size").As_Integer),
+         Online_Set_Size        =>
+           Integer (Chart_Root.Get ("online_set_size").As_Integer),
+         TP_SL_Offline_Set_Size =>
+           Integer (Chart_Root.Get ("tp_sl_offline_set_size").As_Integer));
    end Load_Chart_Config;
 
    procedure Check_Load_Config_Result (Result : TOML.Read_Result) is

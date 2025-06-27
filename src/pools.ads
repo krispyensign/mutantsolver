@@ -13,8 +13,6 @@ is
      of Swim_Lane;
 
    function Make_Pool
-     (ex_candles           : Core.Candles;
-      ha_candles           : Core.HA_Candles;
-      time_interval_period : Positive) return Pool;
+     (ex_candles : Core.Candles; time_interval_period : Positive) return Pool;
 
 end Pools;

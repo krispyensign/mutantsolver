@@ -4,10 +4,13 @@ with TA;
 package body Pools is
 
    function Make_Pool
-     (ex_candles           : Core.Candles;
-      ha_candles           : Core.HA_Candles;
-      time_interval_period : Positive) return Pool
+     (ex_candles : Core.Candles; time_interval_period : Positive) return Pool
    is
+      --  apply the heiken ashi transform
+      ha_candles     : constant Core.HA_Candles (1 .. count) :=
+        [for i in ex_candles'Range
+         => (if i = 1 then Core.Make_HA_Candle (ex_candles (1), ex_candles (1))
+             else Core.Make_HA_Candle (ex_candles (i), ex_candles (i - 1)))];
       --  convert candle records to pool object
       full_data_pool : Pool :=
         [Core.Ask_Open     => [for i in 1 .. Count => ex_candles (i).Ask_Open],

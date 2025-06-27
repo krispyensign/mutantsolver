@@ -10,31 +10,39 @@ with Pools;
 
 procedure Mutantsolver is
    --  load the configs from the toml files
-   result : constant TOML.Read_Result :=
+   result         : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
-   oanda  : constant Config.Oanda_Access := Config.Load_Oanda (result);
-   chart  : constant Config.Chart_Config := Config.Load_Chart_Config (result);
-   count  : constant Integer := (chart.Train_Set_Size + chart.Sample_Set_Size);
-
+   oanda          : constant Config.Oanda_Access := Config.Load_Oanda (result);
+   chart          : constant Config.Chart_Config :=
+     Config.Load_Chart_Config (result);
+   count          : constant Integer :=
+     (chart.Offline_Set_Size + chart.Online_Set_Size);
    --  fetch the candles and allocate candles on the stack
-   ex_candles : constant Core.Candles (1 .. count) :=
-     Oanda_Exchange.Fetch_Candles (oanda, chart);
-
-   --  apply the heiken ashi transform
-   ha_candles : constant Core.HA_Candles (1 .. count) :=
-     [for i in ex_candles'Range
-      => (if i = 1 then Core.Make_HA_Candle (ex_candles (1), ex_candles (1))
-          else Core.Make_HA_Candle (ex_candles (i), ex_candles (i - 1)))];
-
+   ex_candles     : Core.Candles (1 .. count);
    --  initialize the Technical analysis library TA-Lib
-   ta_result : Integer := TA.TA_Initialize;
-
+   ta_result      : constant Integer := TA.TA_Initialize;
    --  convert candle records to pool object
-   package p is new Pools (Count => count);
-   full_data_pool : p.Pool :=
-     p.Make_Pool (ex_candles, ha_candles, chart.Time_Period_Interval);
+   package full_p is new Pools (Count => count);
+   full_data_pool : full_p.Pool;
+
+   package offline_p is new Pools (Count => chart.Offline_Set_Size);
+   offline_data_pool : offline_p.Pool;
+
+   package online_p is new Pools (Count => chart.Online_Set_Size);
+   online_data_pool : online_p.Pool;
+
+   package tp_sl_offline_p is new
+     Pools (Count => chart.TP_SL_Offline_Set_Size);
+   tp_sl_offline_data_pool : tp_sl_offline_p.Pool;
 
 begin
-   null;
+   --  fetch the candles and allocate candles on the stack
+   ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
+   --  apply the heiken ashi transform
+   full_data_pool := full_p.Make_Pool (ex_candles, chart.Time_Period_Interval);
+
+   offline_data_pool :=
+     full_data_pool (Core.Column_Key'First .. Core.Column_Key'Last)
+       (1 .. chart.Offline_Set_Size);
 
 end Mutantsolver;
