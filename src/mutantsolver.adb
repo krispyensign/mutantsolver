@@ -38,9 +38,6 @@ procedure Mutantsolver is
 begin
    --  fetch the candles
    ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
-   if ex_candles'Length = 0 then
-      raise Program_Error;
-   end if;
 
    --  populate the data pool from the retrieved candles
    full_data_pool := full_p.Make_Pool (ex_candles, chart.Time_Period_Interval);
