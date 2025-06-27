@@ -16,7 +16,9 @@ package body Config is
       Chart_Root : constant TOML.TOML_Value := Result.Value.Get ("chart");
    begin
       return
-        (Instrument           => Chart_Root.Get ("instrument").As_String,
+        (Time_Period_Interval => 0,
+         --  TODO populate for real life
+         Instrument           => Chart_Root.Get ("instrument").As_String,
          Num_Digits           =>
            Integer (Chart_Root.Get ("digits").As_Integer),
          Granularity          => Chart_Root.Get ("granularity").As_String,

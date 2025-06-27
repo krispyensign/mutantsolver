@@ -19,6 +19,7 @@ package Config is
       Train_Set_Size       : Integer;
       Sample_Set_Size      : Integer;
       TP_SL_Train_Set_Size : Integer;
+      Time_Period_Interval : Integer;
    end record;
 
    function Load_Oanda (Result : TOML.Read_Result) return Oanda_Access;

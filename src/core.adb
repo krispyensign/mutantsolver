@@ -3,12 +3,13 @@ pragma Ada_2022;
 package body Core is
 
    function Make_HA_Candle
-     (current_candle : Candle'Class; previous_candle : Candle'Class)
+     (current_candle : Candle_Base'Class; previous_candle : Candle_Base'Class)
       return HA_Candle is
    begin
       return
         (Volume    => current_candle.Volume,
          Complete  => current_candle.Complete,
+         Time      => current_candle.Time,
          Ask_Open  =>
            (previous_candle.Ask_Open + previous_candle.Ask_Close) / 2.0,
          Ask_High  =>
@@ -59,8 +60,7 @@ package body Core is
            (current_candle.Bid_Open + current_candle.Bid_High
             + current_candle.Bid_Low
             + current_candle.Bid_Close)
-           / 4.0,
-         Time      => current_candle.Time);
+           / 4.0);
    end Make_HA_Candle;
 
 end Core;

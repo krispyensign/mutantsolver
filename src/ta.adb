@@ -2,17 +2,17 @@ pragma Ada_2022;
 
 package body TA is
 
-   procedure Calc_TA_ATR
-     (in_high     : Real_Array;
-      in_low      : Real_Array;
-      in_close    : Real_Array;
-      time_period : Integer;
-      out_real    : out Real_Array)
+   function Calc_TA_ATR
+     (in_high     : Core.Real_Array;
+      in_low      : Core.Real_Array;
+      in_close    : Core.Real_Array;
+      time_period : Integer) return Core.Real_Array
    is
-      result  : Integer;
-      out_idx : Integer;
-      out_end : Integer;
-      temp    : Real_Array (1 .. out_real'Length);
+      result   : Integer;
+      out_idx  : Integer;
+      out_end  : Integer;
+      temp     : Core.Real_Array (1 .. in_high'Length);
+      out_real : Core.Real_Array (1 .. in_high'Length);
    begin
       result :=
         TA_ATR
@@ -30,15 +30,17 @@ package body TA is
       end if;
       out_real (1 .. out_idx) := temp (out_end + 1 .. out_real'Length);
       out_real (out_idx + 1 .. out_real'Length) := temp (1 .. out_end);
+      return out_real;
    end Calc_TA_ATR;
 
-   procedure Calc_TA_WMA
-     (in_real : Real_Array; time_period : Integer; out_real : out Real_Array)
+   function Calc_TA_WMA
+     (in_real : Core.Real_Array; time_period : Integer) return Core.Real_Array
    is
-      result  : Integer;
-      out_idx : Integer;
-      out_end : Integer;
-      temp    : Real_Array (1 .. out_real'Length);
+      result   : Integer;
+      out_idx  : Integer;
+      out_end  : Integer;
+      temp     : Core.Real_Array (1 .. in_real'Length);
+      out_real : Core.Real_Array (1 .. in_real'Length);
    begin
       result :=
         TA_WMA
@@ -54,6 +56,7 @@ package body TA is
       end if;
       out_real (1 .. out_idx) := temp (out_end + 1 .. out_real'Length);
       out_real (out_idx + 1 .. out_real'Length) := temp (1 .. out_end);
+      return out_real;
    end Calc_TA_WMA;
 
 end TA;
