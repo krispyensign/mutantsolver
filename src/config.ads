@@ -13,13 +13,13 @@ package Config is
    end record;
 
    type Chart_Config is record
-      Instrument           : String (1 .. 7);
-      Num_Digits           : Integer;
-      Granularity          : String (1 .. 2);
-      Train_Set_Size       : Integer;
-      Sample_Set_Size      : Integer;
-      TP_SL_Train_Set_Size : Integer;
-      Time_Period_Interval : Integer;
+      Instrument             : String (1 .. 7);
+      Num_Digits             : Integer;
+      Granularity            : String (1 .. 2);
+      Offline_Set_Size       : Integer;
+      Online_Set_Size        : Integer;
+      TP_SL_Offline_Set_Size : Integer;
+      Time_Period_Interval   : Integer;
    end record;
 
    function Load_Oanda (Result : TOML.Read_Result) return Oanda_Access;

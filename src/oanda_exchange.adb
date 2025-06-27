@@ -17,7 +17,7 @@ package body Oanda_Exchange is
      (oanda : Config.Oanda_Access; chart : Config.Chart_Config) return String
    is
       count           : constant Integer :=
-        chart.Sample_Set_Size + chart.Train_Set_Size;
+        chart.Online_Set_Size + chart.Offline_Set_Size;
       constructed_url : constant String :=
         ubo.To_String (oanda.URL)
         & "/v3/instruments/"
@@ -106,7 +106,7 @@ package body Oanda_Exchange is
    is
       unmapped_json_array : json.JSON_Array;
       count               : constant Integer :=
-        chart.Sample_Set_Size + chart.Train_Set_Size;
+        chart.Online_Set_Size + chart.Offline_Set_Size;
       out_candles         : Core.Candles (1 .. count);
       constructed_url     : constant String := Construct_URL (oanda, chart);
 
