@@ -36,19 +36,30 @@ procedure Mutantsolver is
    tp_sl_offline_data_pool : tp_sl_offline_p.Pool;
 
 begin
-   --  fetch the candles and allocate candles on the stack
+   --  fetch the candles
    ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
-   --  apply the heiken ashi transform
+
+   --  populate the data pool from the retrieved candles
    full_data_pool := full_p.Make_Pool (ex_candles, chart.Time_Period_Interval);
 
+   --  partition the offline data pool
    offline_data_pool :=
      [for i in Core.Column_Key'Range
       => offline_p.Swim_Lane
            (full_data_pool (i) (1 .. chart.Offline_Set_Size))];
 
+   --  populate the tp/sl offline data pool
+   tp_sl_offline_data_pool :=
+     [for i in Core.Column_Key'Range
+      => tp_sl_offline_p.Swim_Lane
+           (offline_data_pool (i)
+              (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size
+               .. chart.Offline_Set_Size))];
+
+   --  poplate the simulated online data pool for zero knowledge tests
    online_data_pool :=
      [for i in Core.Column_Key'Range
       => online_p.Swim_Lane
-           (full_data_pool (i) (chart.Offline_Set_Size + 1 .. Count))];
+           (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))];
 
 end Mutantsolver;
