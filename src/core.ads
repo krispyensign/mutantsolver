@@ -69,13 +69,15 @@ package Core is
    type Candle is new Candle_Base with null record;
    type HA_Candle is new Candle_Base with null record;
 
-   function Make_HA_Candle
-     (current_candle : Candle_Base'Class; previous_candle : Candle_Base'Class)
-      return HA_Candle;
-
    type Real_Array is array (Positive range <>) of Long_Float;
    type Real_Array_Ptr is not null access all Real_Array;
    type Candles is array (Positive range <>) of Candle;
    type HA_Candles is array (Positive range <>) of HA_Candle;
+
+   function Make_HA_Candle
+     (current_candle : Candle_Base'Class; previous_candle : Candle_Base'Class)
+      return HA_Candle;
+
+   function Make_HA_Candles (in_candles : Candles) return HA_Candles;
 
 end Core;

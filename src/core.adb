@@ -2,6 +2,15 @@ pragma Ada_2022;
 
 package body Core is
 
+   function Make_HA_Candles (in_candles : Candles) return HA_Candles is
+      temp_ha_candles : HA_Candles :=
+        [for i in 1 .. in_candles'Length
+         => (if i = 1 then Core.Make_HA_Candle (in_candles (1), in_candles (1))
+             else Core.Make_HA_Candle (in_candles (i), in_candles (i - 1)))];
+   begin
+      return temp_ha_candles;
+   end Make_HA_Candles;
+
    function Make_HA_Candle
      (current_candle : Candle_Base'Class; previous_candle : Candle_Base'Class)
       return HA_Candle is

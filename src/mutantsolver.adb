@@ -42,7 +42,13 @@ begin
    full_data_pool := full_p.Make_Pool (ex_candles, chart.Time_Period_Interval);
 
    offline_data_pool :=
-     full_data_pool (Core.Column_Key'First .. Core.Column_Key'Last)
-       (1 .. chart.Offline_Set_Size);
+     [for i in Core.Column_Key'Range
+      => offline_p.Swim_Lane
+           (full_data_pool (i) (1 .. chart.Offline_Set_Size))];
+
+   online_data_pool :=
+     [for i in Core.Column_Key'Range
+      => online_p.Swim_Lane
+           (full_data_pool (i) (chart.Offline_Set_Size + 1 .. Count))];
 
 end Mutantsolver;

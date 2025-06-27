@@ -7,10 +7,8 @@ package body Pools is
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool
    is
       --  apply the heiken ashi transform
-      ha_candles     : constant Core.HA_Candles (1 .. count) :=
-        [for i in ex_candles'Range
-         => (if i = 1 then Core.Make_HA_Candle (ex_candles (1), ex_candles (1))
-             else Core.Make_HA_Candle (ex_candles (i), ex_candles (i - 1)))];
+      int_ha_candles : constant Core.HA_Candles (1 .. Count) :=
+        Core.Make_HA_Candles (ex_candles);
       --  convert candle records to pool object
       full_data_pool : Pool :=
         [Core.Ask_Open     => [for i in 1 .. Count => ex_candles (i).Ask_Open],
@@ -28,21 +26,30 @@ package body Pools is
          Core.Bid_Low      => [for i in 1 .. Count => ex_candles (i).Bid_Low],
          Core.Bid_Close    =>
            [for i in 1 .. Count => ex_candles (i).Bid_Close],
-         Core.HA_Ask_Open  => [for i in 1 .. Count => ha_candles (i).Ask_Open],
-         Core.HA_Ask_High  => [for i in 1 .. Count => ha_candles (i).Ask_High],
-         Core.HA_Ask_Low   => [for i in 1 .. Count => ha_candles (i).Ask_Low],
+         Core.HA_Ask_Open  =>
+           [for i in 1 .. Count => int_ha_candles (i).Ask_Open],
+         Core.HA_Ask_High  =>
+           [for i in 1 .. Count => int_ha_candles (i).Ask_High],
+         Core.HA_Ask_Low   =>
+           [for i in 1 .. Count => int_ha_candles (i).Ask_Low],
          Core.HA_Ask_Close =>
-           [for i in 1 .. Count => ha_candles (i).Ask_Close],
-         Core.HA_Mid_Open  => [for i in 1 .. Count => ha_candles (i).Mid_Open],
-         Core.HA_Mid_High  => [for i in 1 .. Count => ha_candles (i).Mid_High],
-         Core.HA_Mid_Low   => [for i in 1 .. Count => ha_candles (i).Mid_Low],
+           [for i in 1 .. Count => int_ha_candles (i).Ask_Close],
+         Core.HA_Mid_Open  =>
+           [for i in 1 .. Count => int_ha_candles (i).Mid_Open],
+         Core.HA_Mid_High  =>
+           [for i in 1 .. Count => int_ha_candles (i).Mid_High],
+         Core.HA_Mid_Low   =>
+           [for i in 1 .. Count => int_ha_candles (i).Mid_Low],
          Core.HA_Mid_Close =>
-           [for i in 1 .. Count => ha_candles (i).Mid_Close],
-         Core.HA_Bid_Open  => [for i in 1 .. Count => ha_candles (i).Bid_Open],
-         Core.HA_Bid_High  => [for i in 1 .. Count => ha_candles (i).Bid_High],
-         Core.HA_Bid_Low   => [for i in 1 .. Count => ha_candles (i).Bid_Low],
+           [for i in 1 .. Count => int_ha_candles (i).Mid_Close],
+         Core.HA_Bid_Open  =>
+           [for i in 1 .. Count => int_ha_candles (i).Bid_Open],
+         Core.HA_Bid_High  =>
+           [for i in 1 .. Count => int_ha_candles (i).Bid_High],
+         Core.HA_Bid_Low   =>
+           [for i in 1 .. Count => int_ha_candles (i).Bid_Low],
          Core.HA_Bid_Close =>
-           [for i in 1 .. Count => ha_candles (i).Bid_Close],
+           [for i in 1 .. Count => int_ha_candles (i).Bid_Close],
          others            => [for i in 1 .. Count => 0.0]];
 
    begin
