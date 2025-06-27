@@ -38,6 +38,9 @@ procedure Mutantsolver is
 begin
    --  fetch the candles
    ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
+   if ex_candles'Length = 0 then
+      raise Program_Error;
+   end if;
 
    --  populate the data pool from the retrieved candles
    full_data_pool := full_p.Make_Pool (ex_candles, chart.Time_Period_Interval);
@@ -53,7 +56,7 @@ begin
      [for i in Core.Column_Key'Range
       => tp_sl_offline_p.Swim_Lane
            (offline_data_pool (i)
-              (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size
+              (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
                .. chart.Offline_Set_Size))];
 
    --  poplate the simulated online data pool for zero knowledge tests

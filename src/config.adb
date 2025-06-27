@@ -16,8 +16,8 @@ package body Config is
       Chart_Root : constant TOML.TOML_Value := Result.Value.Get ("chart");
    begin
       return
-        (Time_Period_Interval   => 0,
-         --  TODO populate for real life
+        (Time_Period_Interval   =>
+           Integer (Chart_Root.Get ("time_period_interval").As_Integer),
          Instrument             => Chart_Root.Get ("instrument").As_String,
          Num_Digits             =>
            Integer (Chart_Root.Get ("digits").As_Integer),

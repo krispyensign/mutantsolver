@@ -15,7 +15,8 @@ package Oanda_Exchange is
 
    function Fetch_Candles
      (oanda : Config.Oanda_Access; chart : Config.Chart_Config)
-      return Core.Candles;
+      return Core.Candles
+      with Post => Fetch_Candles'Result'Length > 0;
 
    function Fetch_Candle_Data
      (token : String; constructed_url : String) return json.JSON_Array;
