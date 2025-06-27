@@ -1,12 +1,8 @@
 pragma Ada_2022;
 with Ada.Calendar;
-with common;
 
 package Core is
    package calendar renames Ada.Calendar;
-
-   type Real_Array is array (Positive range <>) of Long_Float;
-   type Real_Array_Ptr is not null access all Real_Array;
 
    type Column_Key is
      (Time,
@@ -61,8 +57,6 @@ package Core is
       WMA_HA_Ask_Low,
       WMA_HA_Ask_Close);
 
-   type Pool_T is array (Column_Key range <>, Positive range <>) of Long_Float ;
-
    type Candle_Base is tagged record
       Complete                               : Boolean;
       Time                                   : calendar.Time;
@@ -75,18 +69,13 @@ package Core is
    type Candle is new Candle_Base with null record;
    type HA_Candle is new Candle_Base with null record;
 
-   type Candles is array (Positive range <>) of Candle;
-   type HA_Candles is array (Positive range <>) of HA_Candle;
-
    function Make_HA_Candle
      (current_candle : Candle_Base'Class; previous_candle : Candle_Base'Class)
       return HA_Candle;
 
-   type Metadata is record
-      Start_Time  : calendar.Time;
-      End_Time    : calendar.Time;
-      Granularity : Duration;
-      Count       : Integer;
-   end record;
+   type Real_Array is array (Positive range <>) of Long_Float;
+   type Real_Array_Ptr is not null access all Real_Array;
+   type Candles is array (Positive range <>) of Candle;
+   type HA_Candles is array (Positive range <>) of HA_Candle;
 
 end Core;
