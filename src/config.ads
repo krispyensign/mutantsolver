@@ -23,7 +23,7 @@ package Config is
    end record
    with
      Dynamic_Predicate =>
-       Chart_Config.Instrument'Length > 0
+       Chart_Config.Instrument'Length = 7
        and then Chart_Config.Granularity'Length > 0
        and then Chart_Config.Time_Period_Interval > 0
        and then Chart_Config.Offline_Set_Size
