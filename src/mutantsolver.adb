@@ -53,7 +53,7 @@ begin
      [for i in Core.Column_Key'Range
       => tp_sl_offline_p.Swim_Lane
            (offline_data_pool (i)
-              (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size
+              (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
                .. chart.Offline_Set_Size))];
 
    --  poplate the simulated online data pool for zero knowledge tests

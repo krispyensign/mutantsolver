@@ -20,7 +20,20 @@ package Config is
       Online_Set_Size        : Integer;
       TP_SL_Offline_Set_Size : Integer;
       Time_Period_Interval   : Integer;
-   end record;
+   end record
+   with
+     Dynamic_Predicate =>
+       Chart_Config.Instrument'Length = 7
+       and then Chart_Config.Granularity'Length > 0
+       and then Chart_Config.Time_Period_Interval > 0
+       and then Chart_Config.Offline_Set_Size
+                > Chart_Config.Time_Period_Interval
+       and then Chart_Config.Online_Set_Size
+                > Chart_Config.Time_Period_Interval
+       and then Chart_Config.TP_SL_Offline_Set_Size
+                > Chart_Config.Time_Period_Interval
+       and then Chart_Config.TP_SL_Offline_Set_Size
+                < Chart_Config.Offline_Set_Size;
 
    function Load_Oanda (Result : TOML.Read_Result) return Oanda_Access;
 
