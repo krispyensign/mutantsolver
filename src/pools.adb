@@ -9,7 +9,8 @@ package body Pools is
       --  apply the heiken ashi transform
       int_ha_candles : constant Core.HA_Candles (1 .. Count) :=
         Core.Make_HA_Candles (ex_candles);
-      --  convert candle records to pool object
+      --  convert candle records to pool object (record format to
+      --  column format)
       full_data_pool : Pool :=
         [Core.Ask_Open     => [for i in 1 .. Count => ex_candles (i).Ask_Open],
          Core.Ask_High     => [for i in 1 .. Count => ex_candles (i).Ask_High],
