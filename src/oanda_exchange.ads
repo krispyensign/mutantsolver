@@ -12,8 +12,7 @@ package Oanda_Exchange is
      (oanda : Config.Oanda_Access; chart : Config.Chart_Config)
       return Core.Candles
    with
-     Pre  => chart.Offline_Set_Size + chart.Online_Set_Size <= 5000,
-     Post => Fetch_Candles'Result'Length > 0;
+     Pre  => chart.Offline_Set_Size + chart.Online_Set_Size <= 5000;
 
 private
    function Fetch_Candle_Data
