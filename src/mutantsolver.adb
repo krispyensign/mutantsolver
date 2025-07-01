@@ -17,7 +17,6 @@ procedure Mutantsolver is
      Config.Load_Chart_Config (result);
    count          : constant Integer :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
-   --  fetch the candles and allocate candles on the stack
    ex_candles     : Core.Candles (1 .. count);
    --  initialize the Technical analysis library TA-Lib
    ta_result      : constant Integer := TA.TA_Initialize;
@@ -45,13 +44,11 @@ procedure Mutantsolver is
    package online_p is new Pools (Count => chart.Online_Set_Size);
    online_data_pool : online_p.Pool;
 
-
-
 begin
    --  fetch the candles
    ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
 
-   --  populate the data pool from the retrieved candles
+   --  populate the full data pool from the retrieved candles
    full_data_pool := full_p.Make_Pool (ex_candles, chart.Time_Period_Interval);
 
    --  partition the offline data pool
@@ -60,7 +57,8 @@ begin
       => offline_p.Swim_Lane
            (full_data_pool (i) (1 .. chart.Offline_Set_Size))];
 
-   --  populate the tp/sl offline data pool
+   --  populate the tp/sl offline data pool with a segment of the main
+   --  offline pool
    tp_sl_offline_data_pool :=
      [for i in Core.Column_Key'Range
       => tp_sl_offline_p.Swim_Lane

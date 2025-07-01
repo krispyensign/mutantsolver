@@ -90,8 +90,8 @@ package Core is
 
    type Scenario is record
       Is_Quasi : Boolean;
-      Take_Profit : Float;
-      Stop_Loss : Float;
+      Take_Profit_Multiplier : Float;
+      Stop_Loss_Multiplier : Float;
       Precision : Positive;
       Entry_Key : Column_Key;
       Exit_Key : Column_Key;
