@@ -74,6 +74,30 @@ package Core is
    type Candles is array (Positive range <>) of Candle;
    type HA_Candles is array (Positive range <>) of HA_Candle;
 
+   subtype Signal_T is Integer range 0 .. 1;
+   subtype Trigger_T is Integer range -1 .. 1;
+
+   type Result is record
+      Entry_Value : Long_Float;
+      Exit_Value : Long_Float;
+      Position : Long_Float;
+      Signal : Signal_T;
+      Trigger : Trigger_T;
+      Take_Profit_Price : Long_Float;
+      Stop_Loss_Price : Long_Float;
+      Running_Total : Long_Float;
+   end record;
+
+   type Scenario is record
+      Is_Quasi : Boolean;
+      Take_Profit : Float;
+      Stop_Loss : Float;
+      Precision : Positive;
+      Entry_Key : Column_Key;
+      Exit_Key : Column_Key;
+      WMA_Source_Key : Column_Key;
+   end record;
+
    function Make_HA_Candle
      (current_candle : Candle_Base'Class; previous_candle : Candle_Base'Class)
       return HA_Candle;
