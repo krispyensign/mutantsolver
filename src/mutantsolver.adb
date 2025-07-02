@@ -10,16 +10,16 @@ with Pools;
 
 procedure Mutantsolver is
    --  load the configs from the toml files
-   result         : constant TOML.Read_Result :=
+   result     : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
-   oanda          : constant Config.Oanda_Access := Config.Load_Oanda (result);
-   chart          : constant Config.Chart_Config :=
+   oanda      : constant Config.Oanda_Access := Config.Load_Oanda (result);
+   chart      : constant Config.Chart_Config :=
      Config.Load_Chart_Config (result);
-   count          : constant Integer :=
+   count      : constant Integer :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
-   ex_candles     : Core.Candles (1 .. count);
+   ex_candles : Core.Candles (1 .. count);
    --  initialize the Technical analysis library TA-Lib
-   ta_result      : constant Integer := TA.TA_Initialize;
+   ta_result  : constant Integer := TA.TA_Initialize;
 
    --  full_data_pool is a pool that contains all candles
    package full_p is new Pools (Count => count);
