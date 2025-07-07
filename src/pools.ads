@@ -18,10 +18,9 @@ package Pools is
      (p : Pool; i : Positive; s : Core.Scenario; num_digits : Positive)
       return Core.Result;
 
-   procedure Calc_WMA_Signal
+   function Calc_WMA_Signal
      (p        : Pool;
       i        : Positive;
       s        : Core.Scenario;
-      last_res : Core.Result;
-      res      : in out Core.Result);
+      last_res : Core.Result) return Core.Result;
 end Pools;

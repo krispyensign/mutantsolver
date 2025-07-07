@@ -3,32 +3,35 @@ with TA;
 
 package body Pools is
 
-   function Update_Prices
-     (p : Pool; i : Positive; s : Core.Scenario; num_digits : Positive)
-      return Core.Result
-   is
-      res : Core.Result;
+   procedure Update_Prices
+     (p : Pool; i : Positive; s : Core.Scenario; res : in out Core.Result) is
    begin
+      -- pin the entry to the ask close at this tick
+      res.Entry_Value := p (Common.Ask_Close) (i);
+
+      -- calc the tp and sl prices
       res.Take_Profit_Price :=
         p (Common.Ask_Close) (i)
         + p (Common.ATR) (i) * Long_Float (s.Take_Profit_Multiplier);
       res.Stop_Loss_Price :=
         p (Common.Ask_Close) (i)
         - p (Common.ATR) (i) * Long_Float (s.Stop_Loss_Multiplier);
+
+      -- if sl is greater than the bid at close the set just below the bid
+      -- close price to prevent order rejection
       if res.Stop_Loss_Price > p (Common.Bid_Close) (i) then
          res.Stop_Loss_Price :=
-           p (Common.Bid_Close) (i) - Long_Float (10.0 ** (-num_digits));
+           p (Common.Bid_Close) (i) - Long_Float (10.0 ** (-s.num_digits));
       end if;
 
       return res;
    end Update_Prices;
 
-   procedure Calc_WMA_Signal
+   function Calc_WMA_Signal
      (p        : Pool;
       i        : Positive;
       s        : Core.Scenario;
-      last_res : Core.Result;
-      res      : in out Core.Result)
+      last_res : Core.Result) return Core.Result
    is
       buy_signal       : constant Boolean :=
         p (s.Entry_Key) (i) > p (s.WMA_Source_Key) (i);
@@ -36,6 +39,7 @@ package body Pools is
         p (s.Entry_Key) (i - 1) > p (s.WMA_Source_Key) (i - 1);
       exit_signal      : constant Boolean :=
         p (s.Exit_Key) (i) > p (s.WMA_Source_Key) (i);
+      res : Core.Result;
    begin
       res.Signal :=
         (if (not prior_buy_signal and buy_signal)
@@ -43,7 +47,43 @@ package body Pools is
          then 1
          else 0);
       res.Trigger := res.Signal - last_res.Signal;
+
+      return res;
    end Calc_WMA_Signal;
+
+   function Kernel
+     (p        : Pool;
+      i        : Positive;
+      s        : Core.Scenario;
+      last_res : Core.Result) return Core.Result
+   is
+      res : Core.Result := Calc_WMA_Signal (p, i, s, last_res);
+   begin
+      if res.Trigger = -1 and last_res.Trigger = 1 and s.Is_Quasi then
+         res.Trigger := 0;
+         res.Signal := 0;
+         last_res.Trigger := 0;
+         last_res.Signal := 0;
+      end if;
+
+      if res.Trigger = 1 then
+         Update_Prices(p, i, s, res);
+
+         return res;
+
+      elsif res.Signal = 1 then
+         res.Take_Profit_Price := last_res.Take_Profit_Price;
+         res.Stop_Loss_Price := last_res.Stop_Loss_Price;
+         res.Entry_Value := last_res.Entry_Value;
+
+      elsif res.Signal = 0 and res.Trigger = 0 then
+         return res;
+
+      end if;
+
+      -- TODO finish this part
+
+   end Kernel;
 
    function Make_Pool
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool
