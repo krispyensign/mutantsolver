@@ -22,8 +22,7 @@ procedure Mutantsolver is
    ta_result  : constant Integer := TA.TA_Initialize;
 
    --  full_data_pool is a pool that contains all candles
-   package full_p is new Pools (Count => count);
-   full_data_pool : full_p.Pool;
+   full_data_pool : Pools.Pool;
 
    --  offline_data_pool is a pool that contains the offline candles that will
    --  be used to solve for optimized entry, exit, source, take profit, and

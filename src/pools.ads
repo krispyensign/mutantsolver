@@ -1,12 +1,9 @@
 pragma Ada_2022;
 with Core;
 
-generic
-   Count : Positive;
-
 package Pools
 is
-   type Swim_Lane is array (Positive range 1 .. Count) of Long_Float;
+   type Swim_Lane is array (Positive range <>) of Long_Float;
    type Pool is
      array (Core.Column_Key range Core.Column_Key'Range) of Swim_Lane;
 

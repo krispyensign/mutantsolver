@@ -57,6 +57,7 @@ package Core is
       WMA_HA_Ask_Low,
       WMA_HA_Ask_Close);
 
+
    type Candle_Base is tagged record
       Complete                               : Boolean;
       Time                                   : calendar.Time;
@@ -78,24 +79,24 @@ package Core is
    subtype Trigger_T is Integer range -1 .. 1;
 
    type Result is record
-      Entry_Value : Long_Float;
-      Exit_Value : Long_Float;
-      Position : Long_Float;
-      Signal : Signal_T;
-      Trigger : Trigger_T;
+      Entry_Value       : Long_Float;
+      Exit_Value        : Long_Float;
+      Position          : Long_Float;
+      Signal            : Signal_T;
+      Trigger           : Trigger_T;
       Take_Profit_Price : Long_Float;
-      Stop_Loss_Price : Long_Float;
-      Running_Total : Long_Float;
+      Stop_Loss_Price   : Long_Float;
+      Running_Total     : Long_Float;
    end record;
 
    type Scenario is record
-      Is_Quasi : Boolean;
+      Is_Quasi               : Boolean;
       Take_Profit_Multiplier : Float;
-      Stop_Loss_Multiplier : Float;
-      Precision : Positive;
-      Entry_Key : Column_Key;
-      Exit_Key : Column_Key;
-      WMA_Source_Key : Column_Key;
+      Stop_Loss_Multiplier   : Float;
+      Precision              : Positive;
+      Entry_Key              : Column_Key;
+      Exit_Key               : Column_Key;
+      WMA_Source_Key         : Column_Key;
    end record;
 
    function Make_HA_Candle
