@@ -2,17 +2,17 @@ pragma Ada_2022;
 
 with Interfaces.C;
 with System;
-with Core;
+with Common;
 
 package TA is
    function TA_Initialize return Integer
    with Import => True, Convention => C, External_Name => "TA_Initialize";
 
    function Calc_TA_ATR
-     (in_high     : Core.Real_Array;
-      in_low      : Core.Real_Array;
-      in_close    : Core.Real_Array;
-      time_period : Integer) return Core.Real_Array
+     (in_high     : Common.Real_Array;
+      in_low      : Common.Real_Array;
+      in_close    : Common.Real_Array;
+      time_period : Integer) return Common.Real_Array
    with
      Pre =>
        in_high'Length = in_low'Length
@@ -21,7 +21,8 @@ package TA is
        and then time_period > 0;
 
    function Calc_TA_WMA
-     (in_real : Core.Real_Array; time_period : Integer) return Core.Real_Array
+     (in_real : Common.Real_Array; time_period : Integer)
+      return Common.Real_Array
    with Pre => time_period < in_real'Length and then time_period > 0;
 
 private

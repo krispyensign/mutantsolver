@@ -7,6 +7,7 @@ with Oanda_Exchange;
 with TA;
 with Core;
 with Pools;
+with Common; use Common;
 
 procedure Mutantsolver is
    --  load the configs from the toml files
@@ -15,14 +16,15 @@ procedure Mutantsolver is
    oanda      : constant Config.Oanda_Access := Config.Load_Oanda (result);
    chart      : constant Config.Chart_Config :=
      Config.Load_Chart_Config (result);
-   count      : constant Integer :=
+   count      : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
    ex_candles : Core.Candles (1 .. count);
    --  initialize the Technical analysis library TA-Lib
    ta_result  : constant Integer := TA.TA_Initialize;
 
    --  full_data_pool is a pool that contains all candles
-   full_data_pool : Pools.Pool;
+   package full_p is new Pools (Count => count);
+   full_data_pool : full_p.Pool;
 
    --  offline_data_pool is a pool that contains the offline candles that will
    --  be used to solve for optimized entry, exit, source, take profit, and
@@ -52,14 +54,14 @@ begin
 
    --  partition the offline data pool
    offline_data_pool :=
-     [for i in Core.Column_Key'Range
+     [for i in Common.Pool_Key'Range
       => offline_p.Swim_Lane
            (full_data_pool (i) (1 .. chart.Offline_Set_Size))];
 
    --  populate the tp/sl offline data pool with a segment of the main
    --  offline pool
    tp_sl_offline_data_pool :=
-     [for i in Core.Column_Key'Range
+     [for i in Common.Pool_Key'Range
       => tp_sl_offline_p.Swim_Lane
            (offline_data_pool (i)
               (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
@@ -67,7 +69,7 @@ begin
 
    --  poplate the simulated online data pool for zero knowledge tests
    online_data_pool :=
-     [for i in Core.Column_Key'Range
+     [for i in Common.Pool_Key'Range
       => online_p.Swim_Lane
            (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))];
 

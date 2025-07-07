@@ -3,6 +3,48 @@ with TA;
 
 package body Pools is
 
+   function Update_Prices
+     (p : Pool; i : Positive; s : Core.Scenario; num_digits : Positive)
+      return Core.Result
+   is
+      res : Core.Result;
+   begin
+      res.Take_Profit_Price :=
+        p (Common.Ask_Close) (i)
+        + p (Common.ATR) (i) * Long_Float (s.Take_Profit_Multiplier);
+      res.Stop_Loss_Price :=
+        p (Common.Ask_Close) (i)
+        - p (Common.ATR) (i) * Long_Float (s.Stop_Loss_Multiplier);
+      if res.Stop_Loss_Price > p (Common.Bid_Close) (i) then
+         res.Stop_Loss_Price :=
+           p (Common.Bid_Close) (i) - Long_Float (10.0 ** (-num_digits));
+      end if;
+
+      return res;
+   end Update_Prices;
+
+   procedure Calc_WMA_Signal
+     (p        : Pool;
+      i        : Positive;
+      s        : Core.Scenario;
+      last_res : Core.Result;
+      res      : in out Core.Result)
+   is
+      buy_signal       : constant Boolean :=
+        p (s.Entry_Key) (i) > p (s.WMA_Source_Key) (i);
+      prior_buy_signal : constant Boolean :=
+        p (s.Entry_Key) (i - 1) > p (s.WMA_Source_Key) (i - 1);
+      exit_signal      : constant Boolean :=
+        p (s.Exit_Key) (i) > p (s.WMA_Source_Key) (i);
+   begin
+      res.Signal :=
+        (if (not prior_buy_signal and buy_signal)
+           or (prior_buy_signal and exit_signal)
+         then 1
+         else 0);
+      res.Trigger := res.Signal - last_res.Signal;
+   end Calc_WMA_Signal;
+
    function Make_Pool
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool
    is
@@ -12,193 +54,217 @@ package body Pools is
       --  convert candle records to pool object (record format to
       --  column format)
       full_data_pool : Pool :=
-        [Core.Ask_Open     => [for i in 1 .. Count => ex_candles (i).Ask_Open],
-         Core.Ask_High     => [for i in 1 .. Count => ex_candles (i).Ask_High],
-         Core.Ask_Low      => [for i in 1 .. Count => ex_candles (i).Ask_Low],
-         Core.Ask_Close    =>
+        [Common.Ask_Open     =>
+           [for i in 1 .. Count => ex_candles (i).Ask_Open],
+         Common.Ask_High     =>
+           [for i in 1 .. Count => ex_candles (i).Ask_High],
+         Common.Ask_Low      =>
+           [for i in 1 .. Count => ex_candles (i).Ask_Low],
+         Common.Ask_Close    =>
            [for i in 1 .. Count => ex_candles (i).Ask_Close],
-         Core.Mid_Open     => [for i in 1 .. Count => ex_candles (i).Mid_Open],
-         Core.Mid_High     => [for i in 1 .. Count => ex_candles (i).Mid_High],
-         Core.Mid_Low      => [for i in 1 .. Count => ex_candles (i).Mid_Low],
-         Core.Mid_Close    =>
+         Common.Mid_Open     =>
+           [for i in 1 .. Count => ex_candles (i).Mid_Open],
+         Common.Mid_High     =>
+           [for i in 1 .. Count => ex_candles (i).Mid_High],
+         Common.Mid_Low      =>
+           [for i in 1 .. Count => ex_candles (i).Mid_Low],
+         Common.Mid_Close    =>
            [for i in 1 .. Count => ex_candles (i).Mid_Close],
-         Core.Bid_Open     => [for i in 1 .. Count => ex_candles (i).Bid_Open],
-         Core.Bid_High     => [for i in 1 .. Count => ex_candles (i).Bid_High],
-         Core.Bid_Low      => [for i in 1 .. Count => ex_candles (i).Bid_Low],
-         Core.Bid_Close    =>
+         Common.Bid_Open     =>
+           [for i in 1 .. Count => ex_candles (i).Bid_Open],
+         Common.Bid_High     =>
+           [for i in 1 .. Count => ex_candles (i).Bid_High],
+         Common.Bid_Low      =>
+           [for i in 1 .. Count => ex_candles (i).Bid_Low],
+         Common.Bid_Close    =>
            [for i in 1 .. Count => ex_candles (i).Bid_Close],
-         Core.HA_Ask_Open  =>
+         Common.HA_Ask_Open  =>
            [for i in 1 .. Count => int_ha_candles (i).Ask_Open],
-         Core.HA_Ask_High  =>
+         Common.HA_Ask_High  =>
            [for i in 1 .. Count => int_ha_candles (i).Ask_High],
-         Core.HA_Ask_Low   =>
+         Common.HA_Ask_Low   =>
            [for i in 1 .. Count => int_ha_candles (i).Ask_Low],
-         Core.HA_Ask_Close =>
+         Common.HA_Ask_Close =>
            [for i in 1 .. Count => int_ha_candles (i).Ask_Close],
-         Core.HA_Mid_Open  =>
+         Common.HA_Mid_Open  =>
            [for i in 1 .. Count => int_ha_candles (i).Mid_Open],
-         Core.HA_Mid_High  =>
+         Common.HA_Mid_High  =>
            [for i in 1 .. Count => int_ha_candles (i).Mid_High],
-         Core.HA_Mid_Low   =>
+         Common.HA_Mid_Low   =>
            [for i in 1 .. Count => int_ha_candles (i).Mid_Low],
-         Core.HA_Mid_Close =>
+         Common.HA_Mid_Close =>
            [for i in 1 .. Count => int_ha_candles (i).Mid_Close],
-         Core.HA_Bid_Open  =>
+         Common.HA_Bid_Open  =>
            [for i in 1 .. Count => int_ha_candles (i).Bid_Open],
-         Core.HA_Bid_High  =>
+         Common.HA_Bid_High  =>
            [for i in 1 .. Count => int_ha_candles (i).Bid_High],
-         Core.HA_Bid_Low   =>
+         Common.HA_Bid_Low   =>
            [for i in 1 .. Count => int_ha_candles (i).Bid_Low],
-         Core.HA_Bid_Close =>
+         Common.HA_Bid_Close =>
            [for i in 1 .. Count => int_ha_candles (i).Bid_Close],
-         others            => [for i in 1 .. Count => 0.0]];
+         others              => [for i in 1 .. Count => 0.0]];
 
    begin
       --  Calculate the ATR
-      full_data_pool (Core.ATR) :=
+      full_data_pool (Common.ATR) :=
         Swim_Lane
           (TA.Calc_TA_ATR
-             (in_high     => Core.Real_Array (full_data_pool (Core.Mid_High)),
-              in_low      => Core.Real_Array (full_data_pool (Core.Mid_Low)),
-              in_close    => Core.Real_Array (full_data_pool (Core.Mid_Close)),
+             (in_high     =>
+                Common.Real_Array (full_data_pool (Common.Mid_High)),
+              in_low      =>
+                Common.Real_Array (full_data_pool (Common.Mid_Low)),
+              in_close    =>
+                Common.Real_Array (full_data_pool (Common.Mid_Close)),
               time_period => time_interval_period));
 
-      full_data_pool (Core.WMA_Ask_Open) :=
+      full_data_pool (Common.WMA_Ask_Open) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Ask_Open)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Ask_Open)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Ask_High) :=
+      full_data_pool (Common.WMA_Ask_High) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Ask_High)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Ask_High)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Ask_Low) :=
+      full_data_pool (Common.WMA_Ask_Low) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Ask_Low)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Ask_Low)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Ask_Close) :=
+      full_data_pool (Common.WMA_Ask_Close) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Ask_Close)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Ask_Close)),
               time_period => time_interval_period));
 
-      full_data_pool (Core.WMA_Mid_Open) :=
+      full_data_pool (Common.WMA_Mid_Open) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Mid_Open)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Mid_Open)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Mid_High) :=
+      full_data_pool (Common.WMA_Mid_High) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Mid_High)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Mid_High)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Mid_Low) :=
+      full_data_pool (Common.WMA_Mid_Low) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Mid_Low)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Mid_Low)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Mid_Close) :=
+      full_data_pool (Common.WMA_Mid_Close) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Mid_Close)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Mid_Close)),
               time_period => time_interval_period));
 
-      full_data_pool (Core.WMA_Bid_Open) :=
+      full_data_pool (Common.WMA_Bid_Open) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Bid_Open)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Bid_Open)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Bid_High) :=
+      full_data_pool (Common.WMA_Bid_High) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Bid_High)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Bid_High)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Bid_Low) :=
+      full_data_pool (Common.WMA_Bid_Low) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Bid_Low)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Bid_Low)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_Bid_Close) :=
+      full_data_pool (Common.WMA_Bid_Close) :=
         Swim_Lane
           (TA.Calc_TA_WMA
-             (in_real     => Core.Real_Array (full_data_pool (Core.Bid_Close)),
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.Bid_Close)),
               time_period => time_interval_period));
 
-      full_data_pool (Core.WMA_HA_Ask_Open) :=
+      full_data_pool (Common.WMA_HA_Ask_Open) :=
         Swim_Lane
           (TA.Calc_TA_WMA
              (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Ask_Open)),
+                Common.Real_Array (full_data_pool (Common.HA_Ask_Open)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Ask_High) :=
+      full_data_pool (Common.WMA_HA_Ask_High) :=
         Swim_Lane
           (TA.Calc_TA_WMA
              (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Ask_High)),
+                Common.Real_Array (full_data_pool (Common.HA_Ask_High)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Ask_Low) :=
+      full_data_pool (Common.WMA_HA_Ask_Low) :=
         Swim_Lane
           (TA.Calc_TA_WMA
              (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Ask_Low)),
+                Common.Real_Array (full_data_pool (Common.HA_Ask_Low)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Ask_Close) :=
+      full_data_pool (Common.WMA_HA_Ask_Close) :=
         Swim_Lane
           (TA.Calc_TA_WMA
              (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Ask_Close)),
-              time_period => time_interval_period));
-
-      full_data_pool (Core.WMA_HA_Mid_Open) :=
-        Swim_Lane
-          (TA.Calc_TA_WMA
-             (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Mid_Open)),
-              time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Mid_High) :=
-        Swim_Lane
-          (TA.Calc_TA_WMA
-             (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Mid_High)),
-              time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Mid_Low) :=
-        Swim_Lane
-          (TA.Calc_TA_WMA
-             (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Mid_Low)),
-              time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Mid_Close) :=
-        Swim_Lane
-          (TA.Calc_TA_WMA
-             (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Mid_Close)),
+                Common.Real_Array (full_data_pool (Common.HA_Ask_Close)),
               time_period => time_interval_period));
 
-      full_data_pool (Core.WMA_HA_Bid_Open) :=
+      full_data_pool (Common.WMA_HA_Mid_Open) :=
         Swim_Lane
           (TA.Calc_TA_WMA
              (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Bid_Open)),
+                Common.Real_Array (full_data_pool (Common.HA_Mid_Open)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Bid_High) :=
+      full_data_pool (Common.WMA_HA_Mid_High) :=
         Swim_Lane
           (TA.Calc_TA_WMA
              (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Bid_High)),
+                Common.Real_Array (full_data_pool (Common.HA_Mid_High)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Bid_Low) :=
+      full_data_pool (Common.WMA_HA_Mid_Low) :=
         Swim_Lane
           (TA.Calc_TA_WMA
              (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Bid_Low)),
+                Common.Real_Array (full_data_pool (Common.HA_Mid_Low)),
               time_period => time_interval_period));
-      full_data_pool (Core.WMA_HA_Bid_Close) :=
+      full_data_pool (Common.WMA_HA_Mid_Close) :=
         Swim_Lane
           (TA.Calc_TA_WMA
              (in_real     =>
-                Core.Real_Array (full_data_pool (Core.HA_Bid_Close)),
+                Common.Real_Array (full_data_pool (Common.HA_Mid_Close)),
+              time_period => time_interval_period));
+
+      full_data_pool (Common.WMA_HA_Bid_Open) :=
+        Swim_Lane
+          (TA.Calc_TA_WMA
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.HA_Bid_Open)),
+              time_period => time_interval_period));
+      full_data_pool (Common.WMA_HA_Bid_High) :=
+        Swim_Lane
+          (TA.Calc_TA_WMA
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.HA_Bid_High)),
+              time_period => time_interval_period));
+      full_data_pool (Common.WMA_HA_Bid_Low) :=
+        Swim_Lane
+          (TA.Calc_TA_WMA
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.HA_Bid_Low)),
+              time_period => time_interval_period));
+      full_data_pool (Common.WMA_HA_Bid_Close) :=
+        Swim_Lane
+          (TA.Calc_TA_WMA
+             (in_real     =>
+                Common.Real_Array (full_data_pool (Common.HA_Bid_Close)),
               time_period => time_interval_period));
 
       return full_data_pool;

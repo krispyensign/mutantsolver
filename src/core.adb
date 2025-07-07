@@ -1,53 +1,12 @@
 pragma Ada_2022;
 
-with Pools;
-
 package body Core is
-
-   function Update_Prices
-     (c : Positive; p : Pools.Pool; i : Positive; s : Scenario; num_digits : Positive)
-      return Result
-   is
-      res : Result;
-   begin
-      res.Take_Profit_Price :=
-        p (Ask_Close) (i) + p (ATR) (i) * s.Take_Profit_Multiplier;
-      res.Stop_Loss_Price :=
-        p (Ask_Close) (i) - p (ATR) (i) * s.Stop_Loss_Multiplier;
-      if res.Stop_Loss_Price > p (Bid_Close) (i) then
-         res.Stop_Loss_Price := p (Bid_Close) (i) - 10 ** (-num_digits);
-      end if;
-
-      return res;
-   end Update_Prices;
-
-   procedure Calc_WMA_Signal
-     (p          : Pools.Pool;
-      i          : Positive;
-      s          : Scenario;
-      num_digits : Positive;
-      last_res   : Result;
-      res        : in out Result)
-   is
-      buy_signal       : Boolean :=
-        p (s.Entry_Key) (i) > p (s.WMA_Source_Key) (i);
-      prior_buy_signal : Boolean :=
-        p (s.Entry_Key) (i - 1) > p (s.WMA_Source_Key) (i - 1);
-      exit_signal      : Boolean := p (s.Exit_Key) > p (s.WMA_Source_Key) (i);
-   begin
-      res.Signal :=
-        (if (not prior_buy_signal and buy_signal)
-           or (prior_buy_signal and exit_signal)
-         then 1
-         else 0);
-      res.Trigger := res.Signal - last_res.Signal;
-   end Calc_WMA_Signal;
 
    function Make_HA_Candles (in_candles : Candles) return HA_Candles is
       temp_ha_candles : HA_Candles :=
         [for i in 1 .. in_candles'Length
-         => (if i = 1 then Core.Make_HA_Candle (in_candles (1), in_candles (1))
-             else Core.Make_HA_Candle (in_candles (i), in_candles (i - 1)))];
+         => (if i = 1 then Make_HA_Candle (in_candles (1), in_candles (1))
+             else HA_Candle (in_candles (i), in_candles (i - 1)))];
    begin
       return temp_ha_candles;
    end Make_HA_Candles;

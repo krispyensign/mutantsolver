@@ -1,13 +1,27 @@
 pragma Ada_2022;
+
+with Common;
 with Core;
 
-package Pools
-is
-   type Swim_Lane is array (Positive range <>) of Long_Float;
+generic
+   Count : Positive;
+package Pools is
+
+   type Swim_Lane is array (Positive range 1 .. Count) of Long_Float;
    type Pool is
-     array (Core.Column_Key range Core.Column_Key'Range) of Swim_Lane;
+     array (Common.Pool_Key range Common.Pool_Key'Range) of Swim_Lane;
 
    function Make_Pool
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool;
 
+   function Update_Prices
+     (p : Pool; i : Positive; s : Core.Scenario; num_digits : Positive)
+      return Core.Result;
+
+   procedure Calc_WMA_Signal
+     (p        : Pool;
+      i        : Positive;
+      s        : Core.Scenario;
+      last_res : Core.Result;
+      res      : in out Core.Result);
 end Pools;
