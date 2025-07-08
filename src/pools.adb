@@ -3,13 +3,13 @@ with TA;
 
 package body Pools is
 
-   procedure Update_Prices
-     (p : Pool; i : Positive; s : Core.Scenario; res : in out Core.Result) is
+   procedure Pin_Prices
+     (p : Pool; i : Positive; s : Core.Scenario; res : in out Core.Scenario_Result) is
    begin
       -- pin the entry to the ask close at this tick
       res.Entry_Value := p (Common.Ask_Close) (i);
 
-      -- calc the tp and sl prices
+      -- calc the tp and sl prices based on the pinned ask_close price
       res.Take_Profit_Price :=
         p (Common.Ask_Close) (i)
         + p (Common.ATR) (i) * Long_Float (s.Take_Profit_Multiplier);
@@ -24,14 +24,13 @@ package body Pools is
            p (Common.Bid_Close) (i) - Long_Float (10.0 ** (-s.num_digits));
       end if;
 
-      return res;
-   end Update_Prices;
+   end Pin_Prices;
 
    function Calc_WMA_Signal
      (p        : Pool;
       i        : Positive;
       s        : Core.Scenario;
-      last_res : Core.Result) return Core.Result
+      last_res : Core.Scenario_Result) return Core.Scenario_Result
    is
       buy_signal       : constant Boolean :=
         p (s.Entry_Key) (i) > p (s.WMA_Source_Key) (i);
@@ -39,7 +38,7 @@ package body Pools is
         p (s.Entry_Key) (i - 1) > p (s.WMA_Source_Key) (i - 1);
       exit_signal      : constant Boolean :=
         p (s.Exit_Key) (i) > p (s.WMA_Source_Key) (i);
-      res : Core.Result;
+      res : Core.Scenario_Result;
    begin
       res.Signal :=
         (if (not prior_buy_signal and buy_signal)
@@ -51,34 +50,37 @@ package body Pools is
       return res;
    end Calc_WMA_Signal;
 
-   function Kernel
+   procedure Kernel
      (p        : Pool;
       i        : Positive;
       s        : Core.Scenario;
-      last_res : Core.Result) return Core.Result
-   is
-      res : Core.Result := Calc_WMA_Signal (p, i, s, last_res);
+      res      : out Core.Scenario_Result;
+      last_res : in out Core.Scenario_Result) is
    begin
+      -- calculate the wma signal
+      res := Calc_WMA_Signal (p, i, s, last_res);
+
+      -- if quasi and the previous candle is an open and this candle
+      -- is a close then erase and bail
       if res.Trigger = -1 and last_res.Trigger = 1 and s.Is_Quasi then
-         res.Trigger := 0;
-         res.Signal := 0;
-         last_res.Trigger := 0;
-         last_res.Signal := 0;
-      end if;
+         res.Reset;
+         last_res.Reset;
+         return;
 
-      if res.Trigger = 1 then
-         Update_Prices(p, i, s, res);
+      -- nothing is happening currently so exit
+      elsif res.Trigger = 0 and res.Signal = 0 then
+         return;
 
-         return res;
+      -- wma cross so trigger and pin the prices
+      elsif res.Trigger = 1 and res.Signal = 1 then
+         Pin_Prices(p, i, s, res);
 
-      elsif res.Signal = 1 then
-         res.Take_Profit_Price := last_res.Take_Profit_Price;
-         res.Stop_Loss_Price := last_res.Stop_Loss_Price;
-         res.Entry_Value := last_res.Entry_Value;
+         return;
 
-      elsif res.Signal = 0 and res.Trigger = 0 then
-         return res;
+      elsif res.Trigger = 0 and res.Signal = 1 then
+         res.Set_Prices (last_res);
 
+         return;
       end if;
 
       -- TODO finish this part

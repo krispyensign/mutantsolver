@@ -14,13 +14,12 @@ package Pools is
    function Make_Pool
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool;
 
-   function Update_Prices
-     (p : Pool; i : Positive; s : Core.Scenario; num_digits : Positive)
-      return Core.Result;
+   procedure Pin_Prices
+     (p : Pool; i : Positive; s : Core.Scenario; res : in out Core.Scenario_Result);
 
    function Calc_WMA_Signal
      (p        : Pool;
       i        : Positive;
       s        : Core.Scenario;
-      last_res : Core.Result) return Core.Result;
+      last_res : Core.Scenario_Result) return Core.Scenario_Result;
 end Pools;
