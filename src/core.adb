@@ -74,8 +74,8 @@ package body Core is
 
    procedure Reset (res : in out Scenario_Result'Class) is
    begin
-      res.Entry_Value := 0.0;
-      res.Exit_Value := 0.0;
+      res.Entry_Price := 0.0;
+      res.Exit_Price := 0.0;
       res.Trigger := 0;
       res.Signal := 0;
       res.Take_Profit_Price := 0.0;
@@ -83,9 +83,10 @@ package body Core is
       res.Running_Total := 0.0;
    end Reset;
 
-   procedure Set_Prices (res : in out Scenario_Result'Class; last_res : Scenario_Result'Class) is
+   procedure Set_Prices
+     (res : in out Scenario_Result'Class; last_res : Scenario_Result'Class) is
    begin
-      res.Entry_Value := last_res.Entry_Value;
+      res.Entry_Price := last_res.Entry_Price;
       res.Take_Profit_Price := last_res.Take_Profit_Price;
       res.Stop_Loss_Price := last_res.Stop_Loss_Price;
    end Set_Prices;

@@ -15,7 +15,10 @@ package Pools is
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool;
 
    procedure Pin_Prices
-     (p : Pool; i : Positive; s : Core.Scenario; res : in out Core.Scenario_Result);
+     (p   : Pool;
+      i   : Positive;
+      s   : Core.Scenario;
+      res : in out Core.Scenario_Result);
 
    function Calc_WMA_Signal
      (p        : Pool;

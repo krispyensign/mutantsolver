@@ -24,8 +24,8 @@ package Core is
    subtype Trigger_T is Integer range -1 .. 1;
 
    type Scenario_Result is tagged record
-      Entry_Value       : Long_Float;
-      Exit_Value        : Long_Float;
+      Entry_Price       : Long_Float;
+      Exit_Price        : Long_Float;
       Position          : Long_Float;
       Signal            : Signal_T;
       Trigger           : Trigger_T;
@@ -36,7 +36,7 @@ package Core is
 
    type Scenario is record
       Is_Quasi               : Boolean;
-      Num_Digits : Positive;
+      Num_Digits             : Positive;
       Take_Profit_Multiplier : Float;
       Stop_Loss_Multiplier   : Float;
       Precision              : Positive;
@@ -46,7 +46,8 @@ package Core is
    end record;
 
    procedure Reset (res : in out Scenario_Result'Class);
-   procedure Set_Prices (res : in out Scenario_Result'Class; last_res : Scenario_Result'Class);
+   procedure Set_Prices
+     (res : in out Scenario_Result'Class; last_res : Scenario_Result'Class);
 
    function Make_HA_Candle
      (current_candle : Candle_Base'Class; previous_candle : Candle_Base'Class)

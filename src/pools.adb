@@ -4,24 +4,32 @@ with TA;
 package body Pools is
 
    procedure Pin_Prices
-     (p : Pool; i : Positive; s : Core.Scenario; res : in out Core.Scenario_Result) is
+     (p   : Pool;
+      i   : Positive;
+      s   : Core.Scenario;
+      res : in out Core.Scenario_Result) is
    begin
-      -- pin the entry to the ask close at this tick
-      res.Entry_Value := p (Common.Ask_Close) (i);
+      --  pin the entry to the ask close at this tick
+      res.Entry_Price := p (Common.Ask_Close) (i);
 
-      -- calc the tp and sl prices based on the pinned ask_close price
-      res.Take_Profit_Price :=
-        p (Common.Ask_Close) (i)
-        + p (Common.ATR) (i) * Long_Float (s.Take_Profit_Multiplier);
-      res.Stop_Loss_Price :=
-        p (Common.Ask_Close) (i)
-        - p (Common.ATR) (i) * Long_Float (s.Stop_Loss_Multiplier);
+      --  calc the tp and sl prices based on the pinned ask_close price
+      if s.Take_Profit_Multiplier /= 0.0 then
+         res.Take_Profit_Price :=
+           p (Common.Ask_Close) (i)
+           + p (Common.ATR) (i) * Long_Float (s.Take_Profit_Multiplier);
+      end if;
 
-      -- if sl is greater than the bid at close the set just below the bid
-      -- close price to prevent order rejection
+      if s.Stop_Loss_Multiplier /= 0.0 then
+         res.Stop_Loss_Price :=
+           p (Common.Ask_Close) (i)
+           - p (Common.ATR) (i) * Long_Float (s.Stop_Loss_Multiplier);
+      end if;
+
+      --  if sl is greater than the bid at close the set just below the bid
+      --  close price to prevent order rejection
       if res.Stop_Loss_Price > p (Common.Bid_Close) (i) then
          res.Stop_Loss_Price :=
-           p (Common.Bid_Close) (i) - Long_Float (10.0 ** (-s.num_digits));
+           p (Common.Bid_Close) (i) - Long_Float (10.0 ** (-s.Num_Digits));
       end if;
 
    end Pin_Prices;
@@ -38,7 +46,7 @@ package body Pools is
         p (s.Entry_Key) (i - 1) > p (s.WMA_Source_Key) (i - 1);
       exit_signal      : constant Boolean :=
         p (s.Exit_Key) (i) > p (s.WMA_Source_Key) (i);
-      res : Core.Scenario_Result;
+      res              : Core.Scenario_Result;
    begin
       res.Signal :=
         (if (not prior_buy_signal and buy_signal)
@@ -55,35 +63,56 @@ package body Pools is
       i        : Positive;
       s        : Core.Scenario;
       res      : out Core.Scenario_Result;
-      last_res : in out Core.Scenario_Result) is
+      last_res : in out Core.Scenario_Result)
+   is
+      bid_low_price  : constant Long_Float := p (Common.Bid_Low) (i);
+      bid_high_price : constant Long_Float := p (Common.Bid_High) (i);
+      bid_exit_price : constant Long_Float :=
+        p (if s.Is_Quasi then Common.Bid_Open else Common.Bid_Close) (i);
    begin
-      -- calculate the wma signal
+      --  calculate the wma signal
       res := Calc_WMA_Signal (p, i, s, last_res);
 
-      -- if quasi and the previous candle is an open and this candle
-      -- is a close then erase and bail
-      if res.Trigger = -1 and last_res.Trigger = 1 and s.Is_Quasi then
+      if res.Trigger = -1 and then last_res.Trigger = 1 and then s.Is_Quasi
+      then
+         --  if quasi and the previous candle is an open and this candle
+         --  is a close then erase and bail
          res.Reset;
          last_res.Reset;
          return;
 
-      -- nothing is happening currently so exit
-      elsif res.Trigger = 0 and res.Signal = 0 then
+      elsif res.Trigger = 0 and then res.Signal = 0 then
+         --  nothing is happening currently so exit
          return;
 
-      -- wma cross so trigger and pin the prices
-      elsif res.Trigger = 1 and res.Signal = 1 then
-         Pin_Prices(p, i, s, res);
+      elsif res.Trigger = 1 and then res.Signal = 1 then
+         --  wma cross so trigger and pin the prices
+         Pin_Prices (p, i, s, res);
 
          return;
 
-      elsif res.Trigger = 0 and res.Signal = 1 then
+      elsif res.Trigger = 0 and then res.Signal = 1 then
+         --  signal is still sustained so copy pinned prices from earlier
          res.Set_Prices (last_res);
 
          return;
       end if;
 
-      -- TODO finish this part
+      if res.Trigger /= 1 and then bid_low_price < res.Stop_Loss_Price then
+         res.Signal := 0;
+         res.Trigger := res.Signal - last_res.Signal;
+         res.Exit_Price := res.Stop_Loss_Price;
+
+      elsif res.Trigger /= 1 and then bid_high_price > res.Take_Profit_Price
+      then
+         res.Signal := 0;
+         res.Trigger := res.Signal - last_res.Signal;
+         res.Exit_Price := res.Take_Profit_Price;
+
+      elsif res.Trigger = -1 then
+         res.Exit_Price := bid_exit_price;
+
+      end if;
 
    end Kernel;
 
