@@ -3,16 +3,16 @@ pragma Ada_2022;
 package body TA is
 
    function Calc_TA_ATR
-     (in_high     : Core.Real_Array;
-      in_low      : Core.Real_Array;
-      in_close    : Core.Real_Array;
-      time_period : Integer) return Core.Real_Array
+     (in_high     : Common.Real_Array;
+      in_low      : Common.Real_Array;
+      in_close    : Common.Real_Array;
+      time_period : Integer) return Common.Real_Array
    is
       result   : Integer;
       out_idx  : Integer;
       out_end  : Integer;
-      temp     : Core.Real_Array (1 .. in_high'Length);
-      out_real : Core.Real_Array (1 .. in_high'Length);
+      temp     : Common.Real_Array (1 .. in_high'Length);
+      out_real : Common.Real_Array (1 .. in_high'Length);
    begin
       result :=
         TA_ATR
@@ -34,13 +34,14 @@ package body TA is
    end Calc_TA_ATR;
 
    function Calc_TA_WMA
-     (in_real : Core.Real_Array; time_period : Integer) return Core.Real_Array
+     (in_real : Common.Real_Array; time_period : Integer)
+      return Common.Real_Array
    is
       result   : Integer;
       out_idx  : Integer;
       out_end  : Integer;
-      temp     : Core.Real_Array (1 .. in_real'Length);
-      out_real : Core.Real_Array (1 .. in_real'Length);
+      temp     : Common.Real_Array (1 .. in_real'Length);
+      out_real : Common.Real_Array (1 .. in_real'Length);
    begin
       result :=
         TA_WMA

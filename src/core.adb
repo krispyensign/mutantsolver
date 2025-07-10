@@ -5,8 +5,8 @@ package body Core is
    function Make_HA_Candles (in_candles : Candles) return HA_Candles is
       temp_ha_candles : HA_Candles :=
         [for i in 1 .. in_candles'Length
-         => (if i = 1 then Core.Make_HA_Candle (in_candles (1), in_candles (1))
-             else Core.Make_HA_Candle (in_candles (i), in_candles (i - 1)))];
+         => (if i = 1 then Make_HA_Candle (in_candles (1), in_candles (1))
+             else Make_HA_Candle (in_candles (i), in_candles (i - 1)))];
    begin
       return temp_ha_candles;
    end Make_HA_Candles;
@@ -72,4 +72,22 @@ package body Core is
            / 4.0);
    end Make_HA_Candle;
 
+   procedure Reset (res : in out Scenario_Result'Class) is
+   begin
+      res.Entry_Price := 0.0;
+      res.Exit_Price := 0.0;
+      res.Trigger := 0;
+      res.Signal := 0;
+      res.Take_Profit_Price := 0.0;
+      res.Stop_Loss_Price := 0.0;
+      res.Running_Total := 0.0;
+   end Reset;
+
+   procedure Set_Prices
+     (res : in out Scenario_Result'Class; last_res : Scenario_Result'Class) is
+   begin
+      res.Entry_Price := last_res.Entry_Price;
+      res.Take_Profit_Price := last_res.Take_Profit_Price;
+      res.Stop_Loss_Price := last_res.Stop_Loss_Price;
+   end Set_Prices;
 end Core;

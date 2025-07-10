@@ -14,3 +14,4 @@ local_config.toml
 # other editor info
 .vscode/
 tags
+*.code-workspace
