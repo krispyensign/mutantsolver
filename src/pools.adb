@@ -94,8 +94,6 @@ package body Pools is
       elsif res.Trigger = 0 and then res.Signal = 1 then
          --  signal is still sustained so copy pinned prices from earlier
          res.Set_Prices (last_res);
-
-         return;
       end if;
 
       if res.Trigger /= 1 and then bid_low_price < res.Stop_Loss_Price then
@@ -112,6 +110,17 @@ package body Pools is
       elsif res.Trigger = -1 then
          res.Exit_Price := bid_exit_price;
 
+      end if;
+
+      if res.Exit_Price /= 0.0 then
+         res.Exit_Value := res.Exit_Price - res.Entry_Price;
+      end if;
+
+      res.Exit_Total := last_res.Exit_Total + res.Exit_Value;
+      res.Running_Total := res.Exit_Total;
+      if res.Signal = 1 then
+         res.Position := bid_exit_price - p (Common.Ask_Close) (i);
+         res.Running_Total := res.Running_Total + res.Position;
       end if;
 
    end Kernel;

@@ -32,6 +32,8 @@ package Core is
       Take_Profit_Price : Long_Float;
       Stop_Loss_Price   : Long_Float;
       Running_Total     : Long_Float;
+      Exit_Value : Long_Float;
+      Exit_Total : Long_Float;
    end record;
 
    type Scenario is record
