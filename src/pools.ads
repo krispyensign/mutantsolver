@@ -18,11 +18,19 @@ package Pools is
      (p   : Pool;
       i   : Positive;
       s   : Core.Scenario;
-      res : in out Core.Scenario_Result);
+      res : in out Core.Scenario_Result_Element);
 
    function Calc_WMA_Signal
      (p        : Pool;
       i        : Positive;
       s        : Core.Scenario;
-      last_res : Core.Scenario_Result) return Core.Scenario_Result;
+      last_res : Core.Scenario_Result_Element)
+      return Core.Scenario_Result_Element;
+
+   procedure Kernel
+     (p       : Pool;
+      i       : Positive;
+      s       : Core.Scenario;
+      results : in out Core.Scenario_Result);
+
 end Pools;

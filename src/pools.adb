@@ -7,7 +7,7 @@ package body Pools is
      (p   : Pool;
       i   : Positive;
       s   : Core.Scenario;
-      res : in out Core.Scenario_Result) is
+      res : in out Core.Scenario_Result_Element) is
    begin
       --  pin the entry to the ask close at this tick
       res.Entry_Price := p (Common.Ask_Close) (i);
@@ -38,7 +38,8 @@ package body Pools is
      (p        : Pool;
       i        : Positive;
       s        : Core.Scenario;
-      last_res : Core.Scenario_Result) return Core.Scenario_Result
+      last_res : Core.Scenario_Result_Element)
+      return Core.Scenario_Result_Element
    is
       buy_signal       : constant Boolean :=
         p (s.Entry_Key) (i) > p (s.WMA_Source_Key) (i);
@@ -46,7 +47,7 @@ package body Pools is
         p (s.Entry_Key) (i - 1) > p (s.WMA_Source_Key) (i - 1);
       exit_signal      : constant Boolean :=
         p (s.Exit_Key) (i) > p (s.WMA_Source_Key) (i);
-      res              : Core.Scenario_Result;
+      res              : Core.Scenario_Result_Element;
    begin
       res.Signal :=
         (if (not prior_buy_signal and buy_signal)
@@ -59,16 +60,18 @@ package body Pools is
    end Calc_WMA_Signal;
 
    procedure Kernel
-     (p        : Pool;
-      i        : Positive;
-      s        : Core.Scenario;
-      res      : out Core.Scenario_Result;
-      last_res : in out Core.Scenario_Result)
+     (p       : Pool;
+      i       : Positive;
+      s       : Core.Scenario;
+      results : in out Core.Scenario_Result)
    is
       bid_low_price  : constant Long_Float := p (Common.Bid_Low) (i);
       bid_high_price : constant Long_Float := p (Common.Bid_High) (i);
       bid_exit_price : constant Long_Float :=
         p (if s.Is_Quasi then Common.Bid_Open else Common.Bid_Close) (i);
+      res            : Core.Scenario_Result_Element := results (i);
+      last_res       : Core.Scenario_Result_Element := results (i);
+
    begin
       --  calculate the wma signal
       res := Calc_WMA_Signal (p, i, s, last_res);
@@ -79,15 +82,21 @@ package body Pools is
          --  is a close then erase and bail
          res.Reset;
          last_res.Reset;
+         results (i) := res;
+         results (i - 1) := last_res;
+
          return;
 
       elsif res.Trigger = 0 and then res.Signal = 0 then
          --  nothing is happening currently so exit
+         results (i) := res;
+
          return;
 
       elsif res.Trigger = 1 and then res.Signal = 1 then
          --  wma cross so trigger and pin the prices
          Pin_Prices (p, i, s, res);
+         results (i) := res;
 
          return;
 
@@ -122,6 +131,8 @@ package body Pools is
          res.Position := bid_exit_price - p (Common.Ask_Close) (i);
          res.Running_Total := res.Running_Total + res.Position;
       end if;
+
+      results (i) := res;
 
    end Kernel;
 
