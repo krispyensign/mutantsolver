@@ -2,11 +2,12 @@ package Common is
 
    type Real_Array is array (Positive range <>) of Long_Float;
    type Real_Array_Ptr is not null access all Real_Array;
-
    type Pool_Key is
      (Time,
+
       Volume,
       ATR,
+
       Bid_Open,
       Bid_High,
       Bid_Low,
@@ -31,6 +32,7 @@ package Common is
       HA_Ask_High,
       HA_Ask_Low,
       HA_Ask_Close,
+
       WMA_Bid_Open,
       WMA_Bid_High,
       WMA_Bid_Low,
@@ -55,4 +57,10 @@ package Common is
       WMA_HA_Ask_High,
       WMA_HA_Ask_Low,
       WMA_HA_Ask_Close);
+
+   subtype WMA_Source_Key is Pool_Key range WMA_Bid_Open .. WMA_HA_Ask_Close;
+   subtype Candle_Key is Pool_Key range Bid_Open .. HA_Ask_Close;
+   subtype Time_Key is Pool_Key range Time .. Time;
+   subtype Other_Key is Pool_Key range Volume .. ATR;
+
 end Common;
