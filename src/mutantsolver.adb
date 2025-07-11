@@ -47,16 +47,16 @@ procedure Mutantsolver is
    --  will not be solved for and are only used for zero knowledge evaluation
    --  of the selected strategy
    package online_p is new Pools (Count => chart.Online_Set_Size);
-   online_data_pool        : online_p.Pool;
+   online_data_pool : online_p.Pool;
 
    current_scenario        : Core.Scenario;
    current_scenario_result : Core.Scenario_Result (1 .. count);
    best_scenario           : Core.Scenario;
    best_scenario_result    : Core.Scenario_Result (1 .. count);
 
-   one_true_count : Integer := 0;
-   start_time : Ada.Real_Time.Time;
-   end_time : Ada.Real_Time.Time;
+   one_true_count      : Integer := 0;
+   start_time          : Ada.Real_Time.Time;
+   end_time            : Ada.Real_Time.Time;
    total_time_duration : Ada.Real_Time.Time_Span;
 
 begin
@@ -117,7 +117,7 @@ begin
       end loop;
    end loop;
    end_time := Ada.Real_Time.Clock;
-   total_time_duration := Ada.Real_Time."-"(end_time, start_time);
+   total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
    io.Put_Line (one_true_count'Image);
    io.Put_Line (total_time_duration'Image);
