@@ -14,23 +14,16 @@ package Pools is
    function Make_Pool
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool;
 
-   procedure Pin_Prices
-     (p   : Pool;
-      i   : Positive;
-      s   : Core.Scenario;
-      res : in out Core.Scenario_Result_Element);
-
-   function Calc_WMA_Signal
-     (p        : Pool;
-      i        : Positive;
-      s        : Core.Scenario;
-      last_res : Core.Scenario_Result_Element)
-      return Core.Scenario_Result_Element;
-
    procedure Kernel
-     (p       : Pool;
-      i       : Positive;
-      s       : Core.Scenario;
-      results : in out Core.Scenario_Result);
+     (p                      : Pool;
+      index                  : Positive;
+      entry_key              : Common.Candle_Key;
+      exit_key               : Common.Candle_Key;
+      wma_source_key         : Common.WMA_Source_Key;
+      take_profit_multiplier : Float;
+      stop_loss_multiplier   : Float;
+      num_digits             : Positive;
+      is_quasi               : Boolean;
+      results                : in out Core.Scenario_Result);
 
 end Pools;

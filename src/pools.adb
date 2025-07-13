@@ -4,49 +4,53 @@ with TA;
 package body Pools is
 
    procedure Pin_Prices
-     (p   : Pool;
-      i   : Positive;
-      s   : Core.Scenario;
-      res : in out Core.Scenario_Result_Element) is
+     (p                      : Pool;
+      i                      : Positive;
+      take_profit_multiplier : Float;
+      stop_loss_multiplier   : Float;
+      num_digits             : Positive;
+      res                    : in out Core.Scenario_Result_Element) is
    begin
       --  pin the entry to the ask close at this tick
       res.Entry_Price := p (Common.Ask_Close) (i);
 
       --  calc the tp and sl prices based on the pinned ask_close price
-      if s.Take_Profit_Multiplier /= 0.0 then
+      if take_profit_multiplier /= 0.0 then
          res.Take_Profit_Price :=
            p (Common.Ask_Close) (i)
-           + p (Common.ATR) (i) * Long_Float (s.Take_Profit_Multiplier);
+           + p (Common.ATR) (i) * Long_Float (take_profit_multiplier);
       end if;
 
-      if s.Stop_Loss_Multiplier /= 0.0 then
+      if stop_loss_multiplier /= 0.0 then
          res.Stop_Loss_Price :=
            p (Common.Ask_Close) (i)
-           - p (Common.ATR) (i) * Long_Float (s.Stop_Loss_Multiplier);
+           - p (Common.ATR) (i) * Long_Float (stop_loss_multiplier);
       end if;
 
       --  if sl is greater than the bid at close the set just below the bid
       --  close price to prevent order rejection
       if res.Stop_Loss_Price > p (Common.Bid_Close) (i) then
          res.Stop_Loss_Price :=
-           p (Common.Bid_Close) (i) - Long_Float (10.0 ** (-s.Num_Digits));
+           p (Common.Bid_Close) (i) - Long_Float (10.0 ** (-num_digits));
       end if;
 
    end Pin_Prices;
 
    function Calc_WMA_Signal
-     (p        : Pool;
-      i        : Positive;
-      s        : Core.Scenario;
-      last_res : Core.Scenario_Result_Element)
+     (p              : Pool;
+      i              : Positive;
+      entry_key      : Common.Candle_Key;
+      exit_key       : Common.Candle_Key;
+      wma_source_key : Common.WMA_Source_Key;
+      last_res       : Core.Scenario_Result_Element)
       return Core.Scenario_Result_Element
    is
       buy_signal       : constant Boolean :=
-        p (s.Entry_Key) (i) > p (s.WMA_Source_Key) (i);
+        p (entry_key) (i) > p (wma_source_key) (i);
       prior_buy_signal : constant Boolean :=
-        p (s.Entry_Key) (i - 1) > p (s.WMA_Source_Key) (i - 1);
+        p (entry_key) (i - 1) > p (wma_source_key) (i - 1);
       exit_signal      : constant Boolean :=
-        p (s.Exit_Key) (i) > p (s.WMA_Source_Key) (i);
+        p (exit_key) (i) > p (wma_source_key) (i);
       res              : Core.Scenario_Result_Element;
    begin
       res.Signal :=
@@ -60,47 +64,65 @@ package body Pools is
    end Calc_WMA_Signal;
 
    procedure Kernel
-     (p       : Pool;
-      i       : Positive;
-      s       : Core.Scenario;
-      results : in out Core.Scenario_Result)
+     (p                      : Pool;
+      index                  : Positive;
+      entry_key              : Common.Candle_Key;
+      exit_key               : Common.Candle_Key;
+      wma_source_key         : Common.WMA_Source_Key;
+      take_profit_multiplier : Float;
+      stop_loss_multiplier   : Float;
+      num_digits             : Positive;
+      is_quasi               : Boolean;
+      results                : in out Core.Scenario_Result)
    is
-      bid_low_price  : constant Long_Float := p (Common.Bid_Low) (i);
-      bid_high_price : constant Long_Float := p (Common.Bid_High) (i);
+      bid_low_price  : constant Long_Float := p (Common.Bid_Low) (index);
+      bid_high_price : constant Long_Float := p (Common.Bid_High) (index);
       bid_exit_price : constant Long_Float :=
-        p (if s.Is_Quasi then Common.Bid_Open else Common.Bid_Close) (i);
-      res            : Core.Scenario_Result_Element := results (i);
-      last_res       : Core.Scenario_Result_Element := results (i - 1);
+        p (if is_quasi then Common.Bid_Open else Common.Bid_Close) (index);
+      res            : Core.Scenario_Result_Element := results (index);
+      last_res       : Core.Scenario_Result_Element := results (index - 1);
 
    begin
       --  calculate the wma signal
-      res := Calc_WMA_Signal (p, i, s, last_res);
+      res :=
+        Calc_WMA_Signal
+          (p, index, entry_key, exit_key, wma_source_key, last_res);
       res.Exit_Total := last_res.Exit_Total;
+      res.Min_Exit_Total := last_res.Min_Exit_Total;
+      res.Max_Exit_Total := last_res.Max_Exit_Total;
+      res.Wins := last_res.Wins;
+      res.Losses := last_res.Losses;
+      res.Ratio := last_res.Ratio;
 
       --  trigger, signal, notes
       --   0, 0, nothing
       --   1, 1, trigger
       --   0, 1, sustain -- check for tp/sl and calc more prices
       --  -1, 0, exit strategy -- check for tp/sl and calc more prices
-      if res.Trigger = -1 and then last_res.Trigger = 1 and then s.Is_Quasi
-      then
+      if res.Trigger = -1 and then last_res.Trigger = 1 and then is_quasi then
          --  if quasi and the previous candle is an open and this candle
          --  is a close then erase and bail
          res.Reset (last_res);
          last_res.Reset (last_res);
-         results (i) := res;
-         results (i - 1) := last_res;
+         results (index) := res;
+         results (index - 1) := last_res;
 
          return;
       elsif res.Trigger = 0 and then res.Signal = 0 then
          --  nothing is happening currently so bail
-         results (i) := res;
+         results (index) := res;
 
          return;
       elsif res.Trigger = 1 and then res.Signal = 1 then
          --  wma cross so pin the prices
-         Pin_Prices (p, i, s, res);
-         results (i) := res;
+         Pin_Prices
+           (p,
+            index,
+            take_profit_multiplier,
+            stop_loss_multiplier,
+            num_digits,
+            res);
+         results (index) := res;
 
          return;
       elsif res.Trigger = -1 and then res.Signal = 0 then
@@ -112,14 +134,14 @@ package body Pools is
       res.Set_Prices (last_res);
 
       --  check for tp/sl
-      if s.Stop_Loss_Multiplier /= 0.0
+      if stop_loss_multiplier /= 0.0
         and then bid_low_price < res.Stop_Loss_Price
       then
          res.Signal := 0;
          res.Trigger := -1;
          res.Exit_Price := res.Stop_Loss_Price;
 
-      elsif s.Take_Profit_Multiplier /= 0.0
+      elsif take_profit_multiplier /= 0.0
         and then bid_high_price > res.Take_Profit_Price
       then
          res.Signal := 0;
@@ -133,11 +155,33 @@ package body Pools is
          res.Exit_Total := res.Exit_Total + res.Exit_Value;
          res.Running_Total := res.Exit_Total;
       else
-         res.Position := bid_exit_price - p (Common.Ask_Close) (i);
+         res.Position := bid_exit_price - p (Common.Ask_Close) (index);
          res.Running_Total := res.Exit_Total + res.Position;
       end if;
 
-      results (i) := res;
+      --  update max total
+      if res.Exit_Total > last_res.Max_Exit_Total then
+         res.Max_Exit_Total := res.Exit_Total;
+      end if;
+
+      --  update min total
+      if res.Exit_Total < last_res.Min_Exit_Total then
+         res.Min_Exit_Total := res.Exit_Total;
+      end if;
+
+      --  update wins and losses
+      if res.Exit_Value > 0.0 then
+         res.Wins := res.Wins + 1;
+      elsif res.Exit_Value < 0.0 then
+         res.Losses := res.Losses + 1;
+      end if;
+
+      res.Ratio :=
+        (if (res.Wins + res.Losses) > 0
+         then Float (res.Wins / (res.Wins + res.Losses))
+         else Float (0.0));
+
+      results (index) := res;
 
    end Kernel;
 

@@ -24,43 +24,46 @@ package Core is
    subtype Trigger_T is Integer range -1 .. 1;
 
    type Scenario_Result_Element is tagged record
-      Entry_Price       : Long_Float;
-      Exit_Price        : Long_Float;
-      Position          : Long_Float;
-      Signal            : Signal_T;
-      Trigger           : Trigger_T;
-      Take_Profit_Price : Long_Float;
-      Stop_Loss_Price   : Long_Float;
-      Running_Total     : Long_Float;
-      Exit_Value        : Long_Float;
-      Exit_Total        : Long_Float;
+      Entry_Price       : Long_Float := 0.0;
+      Exit_Price        : Long_Float := 0.0;
+      Position          : Long_Float := 0.0;
+      Signal            : Signal_T := 0;
+      Trigger           : Trigger_T := 0;
+      Take_Profit_Price : Long_Float := 0.0;
+      Stop_Loss_Price   : Long_Float := 0.0;
+      Running_Total     : Long_Float := 0.0;
+      Exit_Value        : Long_Float := 0.0;
+      Exit_Total        : Long_Float := 0.0;
+      Wins              : Natural := 0;
+      Losses            : Natural := 0;
+      Min_Exit_Total    : Long_Float := 0.0;
+      Max_Exit_Total    : Long_Float := 0.0;
+      Ratio             : Float := 0.0;
    end record;
 
    type Scenario_Report is record
-      Wins           : Natural;
-      Losses         : Natural;
-      Max_Exit_Total : Long_Float;
-      Min_Exit_Total : Long_Float;
-      Ratio          : Float;
-      Final_Total    : Long_Float;
+      Is_Quasi               : Boolean := False;
+      Num_Digits             : Positive := 5;
+      Take_Profit_Multiplier : Float := 0.0;
+      Stop_Loss_Multiplier   : Float := 0.0;
+      Entry_Key              : Common.Candle_Key := Common.Bid_Open;
+      Exit_Key               : Common.Candle_Key := Common.Bid_Open;
+      WMA_Source_Key         : Common.WMA_Source_Key := Common.WMA_Bid_Open;
+      Wins                   : Natural := 0;
+      Losses                 : Natural := 0;
+      Max_Exit_Total         : Long_Float := 0.0;
+      Min_Exit_Total         : Long_Float := 0.0;
+      Ratio                  : Float := 0.0;
+      Final_Total            : Long_Float := 0.0;
    end record;
 
    type Scenario_Result is
      array (Positive range <>) of Scenario_Result_Element;
 
-   type Scenario is record
-      Is_Quasi               : Boolean;
-      Num_Digits             : Positive;
-      Take_Profit_Multiplier : Float;
-      Stop_Loss_Multiplier   : Float;
-      Entry_Key              : Common.Candle_Key;
-      Exit_Key               : Common.Candle_Key;
-      WMA_Source_Key         : Common.WMA_Source_Key;
-   end record;
-
    procedure Reset
      (res           : in out Scenario_Result_Element'Class;
       reference_res : Scenario_Result_Element'Class);
+
    procedure Set_Prices
      (res      : in out Scenario_Result_Element'Class;
       last_res : Scenario_Result_Element'Class);
