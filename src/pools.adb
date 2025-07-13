@@ -70,66 +70,71 @@ package body Pools is
       bid_exit_price : constant Long_Float :=
         p (if s.Is_Quasi then Common.Bid_Open else Common.Bid_Close) (i);
       res            : Core.Scenario_Result_Element := results (i);
-      last_res       : Core.Scenario_Result_Element := results (i);
+      last_res       : Core.Scenario_Result_Element := results (i - 1);
 
    begin
       --  calculate the wma signal
       res := Calc_WMA_Signal (p, i, s, last_res);
+      res.Exit_Total := last_res.Exit_Total;
 
+      --  trigger, signal, notes
+      --   0, 0, nothing
+      --   1, 1, trigger
+      --   0, 1, sustain -- check for tp/sl and calc more prices
+      --  -1, 0, exit strategy -- check for tp/sl and calc more prices
       if res.Trigger = -1 and then last_res.Trigger = 1 and then s.Is_Quasi
       then
          --  if quasi and the previous candle is an open and this candle
          --  is a close then erase and bail
-         res.Reset;
-         last_res.Reset;
+         res.Reset (last_res);
+         last_res.Reset (last_res);
          results (i) := res;
          results (i - 1) := last_res;
 
          return;
-
       elsif res.Trigger = 0 and then res.Signal = 0 then
-         --  nothing is happening currently so exit
+         --  nothing is happening currently so bail
          results (i) := res;
 
          return;
-
       elsif res.Trigger = 1 and then res.Signal = 1 then
-         --  wma cross so trigger and pin the prices
+         --  wma cross so pin the prices
          Pin_Prices (p, i, s, res);
          results (i) := res;
 
          return;
-
-      elsif res.Trigger = 0 and then res.Signal = 1 then
-         --  signal is still sustained so copy pinned prices from earlier
-         res.Set_Prices (last_res);
+      elsif res.Trigger = -1 and then res.Signal = 0 then
+         --  wma cross so set the exit prices
+         res.Exit_Price := bid_exit_price;
       end if;
 
-      if res.Trigger /= 1 and then bid_low_price < res.Stop_Loss_Price then
-         res.Signal := 0;
-         res.Trigger := res.Signal - last_res.Signal;
-         res.Exit_Price := res.Stop_Loss_Price;
+      --  set the prices
+      res.Set_Prices (last_res);
 
-      elsif res.Trigger /= 1 and then bid_high_price > res.Take_Profit_Price
+      --  check for tp/sl
+      if s.Stop_Loss_Multiplier /= 0.0
+        and then bid_low_price < res.Stop_Loss_Price
       then
          res.Signal := 0;
-         res.Trigger := res.Signal - last_res.Signal;
+         res.Trigger := -1;
+         res.Exit_Price := res.Stop_Loss_Price;
+
+      elsif s.Take_Profit_Multiplier /= 0.0
+        and then bid_high_price > res.Take_Profit_Price
+      then
+         res.Signal := 0;
+         res.Trigger := -1;
          res.Exit_Price := res.Take_Profit_Price;
-
-      elsif res.Trigger = -1 then
-         res.Exit_Price := bid_exit_price;
-
       end if;
 
+      --  update the running and exit totals
       if res.Exit_Price /= 0.0 then
          res.Exit_Value := res.Exit_Price - res.Entry_Price;
-      end if;
-
-      res.Exit_Total := last_res.Exit_Total + res.Exit_Value;
-      res.Running_Total := res.Exit_Total;
-      if res.Signal = 1 then
+         res.Exit_Total := res.Exit_Total + res.Exit_Value;
+         res.Running_Total := res.Exit_Total;
+      else
          res.Position := bid_exit_price - p (Common.Ask_Close) (i);
-         res.Running_Total := res.Running_Total + res.Position;
+         res.Running_Total := res.Exit_Total + res.Position;
       end if;
 
       results (i) := res;

@@ -49,12 +49,18 @@ procedure Mutantsolver is
    package online_p is new Pools (Count => chart.Online_Set_Size);
    online_data_pool : online_p.Pool;
 
-   current_scenario        : Core.Scenario;
-   current_scenario_result : Core.Scenario_Result (1 .. count);
-   best_scenario           : Core.Scenario;
-   best_scenario_result    : Core.Scenario_Result (1 .. count);
+   best_scenario        : Core.Scenario;
+   best_scenario_result : Core.Scenario_Result (1 .. count);
+   best_scenario_report : Core.Scenario_Report := (
+      Wins => 0,
+      Losses => 0,
+      Final_Total => 0.0,
+      Ratio => 0.0,
+      Max_Exit_Total => 0.0,
+      Min_Exit_Total => 0.0);
 
-   one_true_count      : Integer := 0;
+   one_true_count      : Natural := 0;
+   total_found         : Natural := 0;
    start_time          : Ada.Real_Time.Time;
    end_time            : Ada.Real_Time.Time;
    total_time_duration : Ada.Real_Time.Time_Span;
@@ -68,49 +74,117 @@ begin
 
    --  partition the offline data pool
    offline_data_pool :=
-     [for i in Common.Pool_Key'Range
-      => offline_p.Swim_Lane
-           (full_data_pool (i) (1 .. chart.Offline_Set_Size))];
+     [for i in Common.Pool_Key'Range =>
+        offline_p.Swim_Lane
+          (full_data_pool (i) (1 .. chart.Offline_Set_Size))];
    --  populate the tp/sl offline data pool with a segment of the main
    --  offline pool
    tp_sl_offline_data_pool :=
-     [for i in Common.Pool_Key'Range
-      => tp_sl_offline_p.Swim_Lane
-           (offline_data_pool (i)
-              (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
-               .. chart.Offline_Set_Size))];
+     [for i in Common.Pool_Key'Range =>
+        tp_sl_offline_p.Swim_Lane
+          (offline_data_pool (i)
+             (chart.Offline_Set_Size
+              - chart.TP_SL_Offline_Set_Size
+              + 1
+              .. chart.Offline_Set_Size))];
 
    --  poplate the simulated online data pool for zero knowledge tests
    online_data_pool :=
-     [for i in Common.Pool_Key'Range
-      => online_p.Swim_Lane
-           (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))];
-
-   current_scenario :=
-     (Is_Quasi               => False,
-      Take_Profit_Multiplier => 0.0,
-      Stop_Loss_Multiplier   => 0.0,
-      Entry_Key              => Common.Ask_Open,
-      Exit_Key               => Common.Ask_Open,
-      WMA_Source_Key         => Common.WMA_Ask_Open,
-      Num_Digits             => chart.Num_Digits);
+     [for i in Common.Pool_Key'Range =>
+        online_p.Swim_Lane
+          (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))];
 
    start_time := Ada.Real_Time.Clock;
    for entry_key in Common.Candle_Key'Range loop
-      current_scenario.Entry_Key := entry_key;
       for exit_key in Common.Candle_Key'Range loop
-         current_scenario.Exit_Key := exit_key;
          for wma_source_key in Common.WMA_Source_Key'Range loop
-            current_scenario.WMA_Source_Key := wma_source_key;
-            one_true_count := one_true_count + 1;
+            declare
+               --  current scenario inputs
+               cur_scen : constant Core.Scenario :=
+                 (Is_Quasi               => False,
+                  Take_Profit_Multiplier => 0.0,
+                  Stop_Loss_Multiplier   => 0.0,
+                  Entry_Key              => entry_key,
+                  Exit_Key               => exit_key,
+                  WMA_Source_Key         => wma_source_key,
+                  Num_Digits             => chart.Num_Digits);
 
-            for i in chart.Time_Period_Interval .. chart.Offline_Set_Size loop
-               offline_p.Kernel
-                 (offline_data_pool,
-                  i,
-                  current_scenario,
-                  current_scenario_result);
-            end loop;
+               --  current scenario result
+               cur_scen_res :
+                 Core.Scenario_Result (1 .. chart.Offline_Set_Size);
+               last_element : Core.Scenario_Result_Element;
+
+               max_exit_total : Long_Float := Long_Float'First;
+               min_exit_total : Long_Float := Long_Float'Last;
+               wins           : Natural := 0;
+               losses         : Natural := 0;
+               ratio          : Float := 0.0;
+               final_total    : Long_Float := 0.0;
+
+            begin
+               one_true_count := one_true_count + 1;
+
+               for i in chart.Time_Period_Interval .. chart.Offline_Set_Size
+               loop
+                  --  calculate iteration
+                  offline_p.Kernel
+                    (offline_data_pool, i, cur_scen, cur_scen_res);
+
+                  --  update max total
+                  if cur_scen_res (i).Exit_Total > max_exit_total then
+                     max_exit_total := cur_scen_res (i).Exit_Total;
+                  end if;
+
+                  --  update min total
+                  if cur_scen_res (i).Exit_Total < min_exit_total then
+                     min_exit_total := cur_scen_res (i).Exit_Total;
+                  end if;
+
+                  --  update wins and losses
+                  if cur_scen_res (i).Exit_Value > 0.0 then
+                     wins := wins + 1;
+                  elsif cur_scen_res (i).Exit_Value < 0.0 then
+                     losses := losses + 1;
+                  end if;
+
+                  last_element := cur_scen_res (i);
+
+               end loop;
+
+               --  skip further processing if criteria is not met
+               last_element := cur_scen_res (chart.Offline_Set_Size);
+               final_total := last_element.Exit_Total;
+               if final_total <= 0.0
+                 or else abs (max_exit_total) <= abs (min_exit_total)
+               then
+                  goto Continue;
+               end if;
+
+               total_found := total_found + 1;
+               ratio :=
+                 (if (wins + losses) > 0
+                  then Float (wins / (wins + losses))
+                  else Float (0.0));
+
+               if (best_scenario_report.Final_Total = 0.0)
+                 or else (ratio >= best_scenario_report.Ratio
+                 and then final_total >= best_scenario_report.Final_Total)
+               then
+                  best_scenario_report :=
+                    (Wins           => wins,
+                     Losses         => losses,
+                     Max_Exit_Total => max_exit_total,
+                     Min_Exit_Total => min_exit_total,
+                     Ratio          => ratio,
+                     Final_Total    => final_total);
+               end if;
+
+               io.Put_Line ("----");
+               io.Put_Line (final_total'Image);
+               io.Put_Line (ratio'Image);
+
+               <<Continue>>
+            end;
 
             --  check best versus current
          end loop;
@@ -120,6 +194,7 @@ begin
    total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
    io.Put_Line (one_true_count'Image);
+   io.Put_Line (total_found'Image);
    io.Put_Line (total_time_duration'Image);
 
 end Mutantsolver;

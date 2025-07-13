@@ -36,6 +36,15 @@ package Core is
       Exit_Total        : Long_Float;
    end record;
 
+   type Scenario_Report is record
+      Wins           : Natural;
+      Losses         : Natural;
+      Max_Exit_Total : Long_Float;
+      Min_Exit_Total : Long_Float;
+      Ratio          : Float;
+      Final_Total    : Long_Float;
+   end record;
+
    type Scenario_Result is
      array (Positive range <>) of Scenario_Result_Element;
 
@@ -49,7 +58,9 @@ package Core is
       WMA_Source_Key         : Common.WMA_Source_Key;
    end record;
 
-   procedure Reset (res : in out Scenario_Result_Element'Class);
+   procedure Reset
+     (res           : in out Scenario_Result_Element'Class;
+      reference_res : Scenario_Result_Element'Class);
    procedure Set_Prices
      (res      : in out Scenario_Result_Element'Class;
       last_res : Scenario_Result_Element'Class);

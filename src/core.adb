@@ -72,7 +72,9 @@ package body Core is
            / 4.0);
    end Make_HA_Candle;
 
-   procedure Reset (res : in out Scenario_Result_Element'Class) is
+   procedure Reset
+     (res           : in out Scenario_Result_Element'Class;
+      reference_res : Scenario_Result_Element'Class) is
    begin
       res.Entry_Price := 0.0;
       res.Exit_Price := 0.0;
@@ -80,7 +82,10 @@ package body Core is
       res.Signal := 0;
       res.Take_Profit_Price := 0.0;
       res.Stop_Loss_Price := 0.0;
-      res.Running_Total := 0.0;
+      res.Position := 0.0;
+      res.Exit_Value := 0.0;
+      res.Exit_Total := reference_res.Exit_Total;
+      res.Running_Total := reference_res.Exit_Total;
    end Reset;
 
    procedure Set_Prices
@@ -90,5 +95,6 @@ package body Core is
       res.Entry_Price := last_res.Entry_Price;
       res.Take_Profit_Price := last_res.Take_Profit_Price;
       res.Stop_Loss_Price := last_res.Stop_Loss_Price;
+      res.Exit_Total := last_res.Exit_Total;
    end Set_Prices;
 end Core;
