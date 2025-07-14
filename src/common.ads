@@ -63,4 +63,8 @@ package Common is
    subtype Time_Key is Pool_Key range Time .. Time;
    subtype Other_Key is Pool_Key range Volume .. ATR;
 
+   type Keyed_Lane is
+     array (Common.Pool_Key range Common.Pool_Key'Range) of Long_Float;
+   type Row_Pool is array (Positive range <>) of Keyed_Lane;
+
 end Common;

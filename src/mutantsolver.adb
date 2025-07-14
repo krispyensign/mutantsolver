@@ -10,6 +10,7 @@ with Pools;
 with Common; use Common;
 with Ada.Text_IO;
 with Ada.Real_Time;
+with Kernel;
 
 procedure Mutantsolver is
    package io renames Ada.Text_IO;
@@ -38,10 +39,11 @@ procedure Mutantsolver is
    --  stop loss components
    --  partition the offline data pool
    package offline_p is new Pools (Count => chart.Offline_Set_Size);
-   offline_data_pool : constant offline_p.Pool :=
-     [for i in Common.Pool_Key'Range
-      => offline_p.Swim_Lane
-           (full_data_pool (i) (1 .. chart.Offline_Set_Size))];
+   offline_data_pool : constant Common.Row_Pool :=
+     offline_p.Make_Row_Pool
+       ([for i in Common.Pool_Key'Range
+         => offline_p.Swim_Lane
+              (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
 
    --  tp_sl_offline_data_pool is a pool that contains a copied slice of the
    --  offline candles that will be used for solving for optimized take profit
@@ -50,22 +52,24 @@ procedure Mutantsolver is
    --  offline pool
    package tp_sl_offline_p is new
      Pools (Count => chart.TP_SL_Offline_Set_Size);
-   tp_sl_offline_data_pool : constant tp_sl_offline_p.Pool :=
-     [for i in Common.Pool_Key'Range
-      => tp_sl_offline_p.Swim_Lane
-           (offline_data_pool (i)
-              (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
-               .. chart.Offline_Set_Size))];
+   tp_sl_offline_data_pool : constant Common.Row_Pool :=
+     tp_sl_offline_p.Make_Row_Pool
+       ([for key in Common.Pool_Key'Range
+         => tp_sl_offline_p.Swim_Lane
+              (full_data_pool (key)
+                 (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
+                  .. chart.Offline_Set_Size))]);
 
    --  online_data_pool is a pool that contains the online candles that
    --  will not be solved for and are only used for zero knowledge evaluation
    --  of the selected strategy
    --  poplate the simulated online data pool for zero knowledge tests
    package online_p is new Pools (Count => chart.Online_Set_Size);
-   online_data_pool : online_p.Pool :=
-     [for i in Common.Pool_Key'Range
-      => online_p.Swim_Lane
-           (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))];
+   online_data_pool : constant Common.Row_Pool :=
+     online_p.Make_Row_Pool
+       ([for i in Common.Pool_Key'Range
+         => online_p.Swim_Lane
+              (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
 
    --  performance metrics
    start_time          : Ada.Real_Time.Time;
@@ -73,14 +77,14 @@ procedure Mutantsolver is
    total_time_duration : Ada.Real_Time.Time_Span;
 
    --  multithreading
-   num_tasks : Positive := 1;
-   kernel_tasks : array (Positive range 1 .. num_tasks) of offline_p.Process_Kernel;
+   num_tasks    : constant Positive := 4;
+   kernel_tasks :
+     array (Positive range 1 .. num_tasks) of Kernel.Process_Kernel;
 
    --  scenario reporting variables
-   best_scenario_report : Core.Scenario_Report;
+   best_scenario_report : Kernel.Scenario_Report;
    one_true_count       : Natural := 0;
    total_found          : Natural := 0;
-
 
 begin
    start_time := Ada.Real_Time.Clock;
@@ -88,16 +92,17 @@ begin
       for exit_key in Common.Candle_Key'Range loop
          for wma_source_key in Common.WMA_Source_Key'Range loop
             one_true_count := one_true_count + 1;
-            kernel_tasks (1 + (one_true_count mod num_tasks)).Start (p    => offline_data_pool,
-                  conf =>
-                    (Start_Index            => chart.Time_Period_Interval,
-                     entry_key              => entry_key,
-                     exit_key               => exit_key,
-                     wma_source_key         => wma_source_key,
-                     take_profit_multiplier => 0.0,
-                     stop_loss_multiplier   => 0.0,
-                     num_digits             => chart.Num_Digits,
-                     is_quasi               => False));
+            kernel_tasks (1 + (one_true_count mod num_tasks)).Start
+              (p    => offline_data_pool,
+               conf =>
+                 (Start_Index            => chart.Time_Period_Interval,
+                  Entry_Key              => entry_key,
+                  Exit_Key               => exit_key,
+                  WMA_Source_Key         => wma_source_key,
+                  Take_Profit_Multiplier => 0.0,
+                  Stop_Loss_Multiplier   => 0.0,
+                  Num_Digits             => chart.Num_Digits,
+                  Is_Quasi               => False));
          end loop;
       end loop;
    end loop;

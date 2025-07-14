@@ -1,72 +1,7 @@
 pragma Ada_2022;
 with TA;
-with Ada.Text_IO;
-with Reporting;
 
 package body Pools is
-   package io renames Ada.Text_IO;
-
-   task body Process_Kernel is
-      procedure Start_Internal (p : Pool; conf : Core.Scenario_Config) is
-         cur_scen_res    : Core.Scenario_Result (1 .. Count) :=
-           [others => <>];
-         last_element    : Core.Scenario_Result_Element;
-         final_total     : Long_Float := 0.0;
-         is_found        : Boolean := False;
-         scenario_report : Core.Scenario_Report;
-      begin
-         for i in conf.Start_Index .. Count loop
-            --  calculate iteration
-            Core.Kernel
-              (curr    =>
-                 (WMA_Component_Price   => p (conf.WMA_Source_Key) (i),
-                  Entry_Component_Price => p (conf.Entry_Key) (i),
-                  Exit_Component_Price  => p (conf.Exit_Key) (i),
-                  ATR                   => p (Common.ATR) (i),
-                  Ask_Close             => p (Common.Ask_Close) (i),
-                  Bid_Open              => p (Common.Bid_Close) (i),
-                  Bid_High              => p (Common.Bid_High) (i),
-                  Bid_Low               => p (Common.Bid_Low) (i),
-                  Bid_Close             => p (Common.Bid_Close) (i)),
-               prev    =>
-                 (WMA_Component_Price   => p (conf.WMA_Source_Key) (i - 1),
-                  Entry_Component_Price => p (conf.Entry_Key) (i - 1),
-                  Exit_Component_Price  => p (conf.Exit_Key) (i - 1),
-                  ATR                   => p (Common.ATR) (i - 1),
-                  Ask_Close             => p (Common.Ask_Close) (i - 1),
-                  Bid_Open              => p (Common.Bid_Close) (i - 1),
-                  Bid_High              => p (Common.Bid_High) (i - 1),
-                  Bid_Low               => p (Common.Bid_Low) (i - 1),
-                  Bid_Close             => p (Common.Bid_Close) (i - 1)),
-               index   => i,
-               conf    => conf,
-               results => cur_scen_res);
-         end loop;
-
-         --  skip further processing if criteria is not met
-         last_element := cur_scen_res (Count);
-         scenario_report :=
-           (Wins           => last_element.Wins,
-            Losses         => last_element.Losses,
-            Max_Exit_Total => last_element.Max_Exit_Total,
-            Min_Exit_Total => last_element.Min_Exit_Total,
-            Ratio          => last_element.Ratio,
-            Final_Total    => last_element.Exit_Total,
-            Config         => conf);
-         Reporting.Reporting.Update_Scenario (scenario_report);
-      end Start_Internal;
-   begin
-      loop
-         select
-            accept Start (p : Pool; conf : Core.Scenario_Config) do
-               Start_Internal (p, conf);
-            end Start;
-         or
-               terminate;
-         end select;
-      end loop;
-   end Process_Kernel;
-
    function Make_Pool
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool
    is
@@ -291,4 +226,17 @@ package body Pools is
 
       return full_data_pool;
    end Make_Pool;
+
+   function Make_Row_Pool (p : Pool) return Common.Row_Pool is
+      rp : Common.Row_Pool (1 .. p'Length);
+   begin
+      for i in Common.Pool_Key'Range loop
+         for j in 1 .. p'Length loop
+            rp (j) (i) := p (i) (j);
+         end loop;
+      end loop;
+
+      return rp;
+   end Make_Row_Pool;
+
 end Pools;
