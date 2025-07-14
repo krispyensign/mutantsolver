@@ -14,16 +14,8 @@ package Pools is
    function Make_Pool
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool;
 
-   procedure Kernel
-     (p                      : Pool;
-      index                  : Positive;
-      entry_key              : Common.Candle_Key;
-      exit_key               : Common.Candle_Key;
-      wma_source_key         : Common.WMA_Source_Key;
-      take_profit_multiplier : Float;
-      stop_loss_multiplier   : Float;
-      num_digits             : Positive;
-      is_quasi               : Boolean;
-      results                : in out Core.Scenario_Result);
+   task type Process_Kernel is
+      entry Start (p : Pool; conf : Core.Scenario_Config);
+   end Process_Kernel;
 
 end Pools;
