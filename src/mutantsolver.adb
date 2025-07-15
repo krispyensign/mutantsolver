@@ -77,7 +77,7 @@ procedure Mutantsolver is
    total_time_duration : Ada.Real_Time.Time_Span;
 
    --  multithreading
-   num_tasks    : constant Positive := 4;
+   num_tasks    : constant Positive := 12;
    kernel_tasks :
      array (Positive range 1 .. num_tasks) of Kernel.Process_Kernel;
 

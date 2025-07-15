@@ -111,6 +111,8 @@ package body Kernel is
            conf.Exit_Key,
            conf.WMA_Source_Key,
            last_res);
+
+      --  prepare the result with the previous result totals
       res.Exit_Total := last_res.Exit_Total;
       res.Min_Exit_Total := last_res.Min_Exit_Total;
       res.Max_Exit_Total := last_res.Max_Exit_Total;
@@ -203,42 +205,43 @@ package body Kernel is
 
    end Kernel;
 
+   function Start_Processing
+     (p : Common.Row_Pool; conf : Scenario_Config) return Scenario_Report
+   is
+      cur_scen_res : Scenario_Result (1 .. p'Length);
+      last_element : Scenario_Result_Element;
+      sr           : Scenario_Report;
+   begin
+      for i in conf.Start_Index .. p'Length loop
+         --  calculate iteration
+         Kernel
+           (curr    => p (i),
+            prev    => p (i - 1),
+            index   => i,
+            conf    => conf,
+            results => cur_scen_res);
+      end loop;
+
+      --  skip further processing if criteria is not met
+      last_element := cur_scen_res (p'Length);
+      sr :=
+        (Wins           => last_element.Wins,
+         Losses         => last_element.Losses,
+         Max_Exit_Total => last_element.Max_Exit_Total,
+         Min_Exit_Total => last_element.Min_Exit_Total,
+         Final_Total    => last_element.Exit_Total,
+         Ratio          => 0.0,
+         Config         => conf);
+
+      return sr;
+   end Start_Processing;
+
+
    task body Process_Kernel is
       best_scenario_report : Scenario_Report;
       last_scenario_report : Scenario_Report;
       total_found          : Natural := 0;
       total_reported       : Natural := 0;
-
-      function Start_Internal
-        (p : Common.Row_Pool; conf : Scenario_Config) return Scenario_Report
-      is
-         cur_scen_res : Scenario_Result (1 .. p'Length) := [others => <>];
-         last_element : Scenario_Result_Element;
-         sr           : Scenario_Report;
-      begin
-         for i in conf.Start_Index .. p'Length loop
-            --  calculate iteration
-            Kernel
-              (curr    => p (i),
-               prev    => p (i - 1),
-               index   => i,
-               conf    => conf,
-               results => cur_scen_res);
-         end loop;
-
-         --  skip further processing if criteria is not met
-         last_element := cur_scen_res (p'Length);
-         sr :=
-           (Wins           => last_element.Wins,
-            Losses         => last_element.Losses,
-            Max_Exit_Total => last_element.Max_Exit_Total,
-            Min_Exit_Total => last_element.Min_Exit_Total,
-            Final_Total    => last_element.Exit_Total,
-            Ratio          => 0.0,
-            Config         => conf);
-
-         return sr;
-      end Start_Internal;
 
       procedure Update_Scenario_Internal (sr : Scenario_Report) is
          ratio : Float;
@@ -266,16 +269,15 @@ package body Kernel is
             best_scenario_report := sr;
             best_scenario_report.Ratio := ratio;
             io.Put_Line ("----");
-            io.Put_Line (sr.Wins'Image);
-            io.Put_Line (sr.Losses'Image);
-            io.Put_Line (sr.Final_Total'Image);
-            io.Put_Line (sr.Ratio'Image);
-            io.Put_Line (sr.Config.Entry_Key'Image);
-            io.Put_Line (sr.Config.Exit_Key'Image);
-            io.Put_Line (sr.Config.WMA_Source_Key'Image);
+            io.Put_Line ("w: " & sr.Wins'Image);
+            io.Put_Line ("l: " & sr.Losses'Image);
+            io.Put_Line ("et: " & sr.Final_Total'Image);
+            io.Put_Line ("r: " & best_scenario_report.Ratio'Image);
+            io.Put_Line ("entry: " & sr.Config.Entry_Key'Image);
+            io.Put_Line ("exit: " & sr.Config.Exit_Key'Image);
+            io.Put_Line ("wma: " & sr.Config.WMA_Source_Key'Image);
+            io.Put_Line ("----");
          end if;
-
-         io.Put_Line (total_found'Image);
 
       end Update_Scenario_Internal;
    begin
@@ -285,7 +287,7 @@ package body Kernel is
                declare
                   sr : Scenario_Report;
                begin
-                  sr := Start_Internal (p, conf);
+                  sr := Start_Processing (p, conf);
                   Update_Scenario_Internal (sr);
                end;
             end Start;
