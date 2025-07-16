@@ -31,7 +31,6 @@ package Kernel is
       Entry_Key              : Common.Candle_Key := Common.Bid_Open;
       Exit_Key               : Common.Candle_Key := Common.Bid_Open;
       WMA_Source_Key         : Common.WMA_Source_Key := Common.WMA_Bid_Open;
-      Use_Pinned_TPSL        : Boolean := False;
    end record;
 
    type Scenario_Report is record

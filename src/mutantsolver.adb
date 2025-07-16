@@ -156,7 +156,6 @@ begin
                         Take_Profit_Multiplier => take_profit_multiplier,
                         Stop_Loss_Multiplier   => stop_loss_multiplier,
                         Num_Digits             => chart.Num_Digits,
-                        Use_Pinned_TPSL => True,
                         Is_Quasi               => False));
                end loop;
             end loop;

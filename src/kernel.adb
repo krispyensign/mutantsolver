@@ -1,8 +1,5 @@
 pragma Ada_2022;
-with Ada.Calendar;
-with Ada.Calendar.Conversions;
 with Ada.Text_IO;
-with Interfaces.C;
 
 package body Kernel is
    package io renames Ada.Text_IO;
@@ -160,8 +157,7 @@ package body Kernel is
          res.Exit_Price := bid_exit_price;
       end if;
 
-      if conf.Use_Pinned_TPSL
-        and then not ((res.Trigger = -1 and then res.Signal = 0)
+      if not ((res.Trigger = -1 and then res.Signal = 0)
                   or else (res.Trigger = 0 and then res.Signal = 1))
       then
          raise Constraint_Error;
@@ -174,61 +170,29 @@ package body Kernel is
          raise Constraint_Error;
       end if;
 
-      if conf.Use_Pinned_TPSL then
-         --  check for stop loss
-         --  check the take profit
-         if conf.Stop_Loss_Multiplier /= 0.0
-           and then res.Stop_Loss_Price > curr (Common.Bid_Low)
-         then
-            res.Signal := 0;
-            res.Trigger := res.Signal - last_res.Signal;
-            res.Exit_Price := res.Stop_Loss_Price;
-            res.Exit_Value := res.Exit_Price - res.Entry_Price;
-            if res.Exit_Price - res.Entry_Price > 0.0 then
-               raise Constraint_Error;
-            end if;
-
-         elsif conf.Take_Profit_Multiplier /= 0.0
-           and then res.Take_Profit_Price < curr (Common.Bid_High)
-         then
-            res.Signal := 0;
-            res.Trigger := res.Signal - last_res.Signal;
-            res.Exit_Price := res.Take_Profit_Price;
-            res.Exit_Value := res.Exit_Price - res.Entry_Price;
-            if res.Exit_Price - res.Entry_Price < 0.0 then
-               raise Constraint_Error;
-            end if;
+      --  check for stop loss
+      --  check the take profit
+      if conf.Stop_Loss_Multiplier /= 0.0
+         and then res.Stop_Loss_Price > curr (Common.Bid_Low)
+      then
+         res.Signal := 0;
+         res.Trigger := res.Signal - last_res.Signal;
+         res.Exit_Price := res.Stop_Loss_Price;
+         res.Exit_Value := res.Exit_Price - res.Entry_Price;
+         if res.Exit_Price - res.Entry_Price > 0.0 then
+            raise Constraint_Error;
          end if;
-      --  else
-      --     declare
-      --        position : constant Long_Float := bid_exit_price - res.Entry_Price;
-      --     begin
-      --        if conf.Take_Profit_Multiplier /= 0.0
-      --          and then res.Trigger /= 1
-      --          and then position
-      --                   > curr (Common.ATR)
-      --                     * Long_Float (conf.Take_Profit_Multiplier)
-      --        then
-      --           res.Signal := 0;
-      --           res.Trigger := res.Signal - last_res.Signal;
-      --           res.Exit_Price := bid_exit_price;
-      --        end if;
 
-      --        if conf.Stop_Loss_Multiplier /= 0.0
-      --          and then position
-      --                   < -curr (Common.ATR)
-      --                     * Long_Float (conf.Stop_Loss_Multiplier)
-      --        then
-      --           res.Signal := 0;
-      --           if res.Trigger = 1 then
-      --              res.Entry_Price := 0.0;
-      --              res.Exit_Price := 0.0;
-      --           else
-      --              res.Exit_Price := bid_exit_price;
-      --           end if;
-      --           res.Trigger := res.Signal - last_res.Signal;
-      --        end if;
-      --     end;
+      elsif conf.Take_Profit_Multiplier /= 0.0
+         and then res.Take_Profit_Price < curr (Common.Bid_High)
+      then
+         res.Signal := 0;
+         res.Trigger := res.Signal - last_res.Signal;
+         res.Exit_Price := res.Take_Profit_Price;
+         res.Exit_Value := res.Exit_Price - res.Entry_Price;
+         if res.Exit_Price - res.Entry_Price < 0.0 then
+            raise Constraint_Error;
+         end if;
       end if;
 
       --  update the running and exit totals
