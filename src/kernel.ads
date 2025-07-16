@@ -31,16 +31,17 @@ package Kernel is
       Entry_Key              : Common.Candle_Key := Common.Bid_Open;
       Exit_Key               : Common.Candle_Key := Common.Bid_Open;
       WMA_Source_Key         : Common.WMA_Source_Key := Common.WMA_Bid_Open;
+      Use_Pinned_TPSL        : Boolean := False;
    end record;
 
    type Scenario_Report is record
       Config         : Scenario_Config;
       Wins           : Natural := 0;
       Losses         : Natural := 0;
-      Max_Exit_Total : Long_Float := 0.0;
-      Min_Exit_Total : Long_Float := 0.0;
+      Max_Exit_Total : Long_Float := Long_Float'First;
+      Min_Exit_Total : Long_Float := Long_Float'Last;
       Ratio          : Float := 0.0;
-      Final_Total    : Long_Float := 0.0;
+      Final_Total    : Long_Float := Long_Float'First;
    end record;
 
    type Scenario_Result is
@@ -63,6 +64,8 @@ package Kernel is
 
    task type Process_Kernel is
       entry Start (p : Common.Row_Pool; conf : Scenario_Config);
+      entry Update_Scenario (sr : Scenario_Report);
+      entry Read (sr : out Scenario_Report; tf : out Natural);
    end Process_Kernel;
 
 end Kernel;

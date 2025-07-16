@@ -1,7 +1,9 @@
 pragma Ada_2022;
 with TA;
+with Ada.Calendar.Conversions;
 
 package body Pools is
+   package conv renames Ada.Calendar.Conversions;
    function Make_Pool
      (ex_candles : Core.Candles; time_interval_period : Positive) return Pool
    is
@@ -11,7 +13,12 @@ package body Pools is
       --  convert candle records to pool object (record format to
       --  column format)
       full_data_pool : Pool :=
-        [Common.Ask_Open     =>
+        [Common.Time         =>
+           [for i in 1 .. Count
+            => Long_Float (conv.To_Unix_Time_64 (ex_candles (i).Time))],
+         Common.Volume       =>
+           [for i in 1 .. Count => Long_Float (ex_candles (i).Volume)],
+         Common.Ask_Open     =>
            [for i in 1 .. Count => ex_candles (i).Ask_Open],
          Common.Ask_High     =>
            [for i in 1 .. Count => ex_candles (i).Ask_High],
@@ -228,10 +235,11 @@ package body Pools is
    end Make_Pool;
 
    function Make_Row_Pool (p : Pool) return Common.Row_Pool is
-      rp : Common.Row_Pool (1 .. p'Length);
+      len : constant Positive := p (Common.Ask_Open)'Length;
+      rp  : Common.Row_Pool (1 .. len);
    begin
       for i in Common.Pool_Key'Range loop
-         for j in 1 .. p'Length loop
+         for j in 1 .. len loop
             rp (j) (i) := p (i) (j);
          end loop;
       end loop;

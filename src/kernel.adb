@@ -1,5 +1,8 @@
 pragma Ada_2022;
+with Ada.Calendar;
+with Ada.Calendar.Conversions;
 with Ada.Text_IO;
+with Interfaces.C;
 
 package body Kernel is
    package io renames Ada.Text_IO;
@@ -57,7 +60,7 @@ package body Kernel is
       --  close price to prevent order rejection
       if res.Stop_Loss_Price > curr (Common.Bid_Close) then
          res.Stop_Loss_Price :=
-           curr (Common.Bid_Close) - Long_Float (10.0 ** (-num_digits));
+           curr (Common.Bid_Close) - Long_Float (10.0**(-num_digits));
       end if;
 
    end Pin_Prices;
@@ -79,8 +82,8 @@ package body Kernel is
       res              : Scenario_Result_Element;
    begin
       res.Signal :=
-        (if (not prior_buy_signal and buy_signal)
-           or (prior_buy_signal and exit_signal)
+        (if (not prior_buy_signal and then buy_signal)
+           or else (prior_buy_signal and then exit_signal)
          then 1
          else 0);
       res.Trigger := res.Signal - last_res.Signal;
@@ -96,10 +99,12 @@ package body Kernel is
       results : in out Scenario_Result)
    is
       bid_exit_price : constant Long_Float :=
-        (if conf.Is_Quasi then curr (Common.Bid_Open)
+        (if conf.Is_Quasi
+         then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
-      res            : Scenario_Result_Element := results (index);
-      last_res       : Scenario_Result_Element := results (index - 1);
+
+      res      : Scenario_Result_Element := results (index);
+      last_res : Scenario_Result_Element := results (index - 1);
 
    begin
       --  calculate the wma signal
@@ -155,42 +160,98 @@ package body Kernel is
          res.Exit_Price := bid_exit_price;
       end if;
 
+      if conf.Use_Pinned_TPSL
+        and then not ((res.Trigger = -1 and then res.Signal = 0)
+                  or else (res.Trigger = 0 and then res.Signal = 1))
+      then
+         raise Constraint_Error;
+      end if;
+
       --  set the prices
       res.Set_Prices (last_res);
 
-      --  check for tp/sl
-      if conf.Stop_Loss_Multiplier /= 0.0
-        and then curr (Common.Bid_Low) < res.Stop_Loss_Price
-      then
-         res.Signal := 0;
-         res.Trigger := -1;
-         res.Exit_Price := res.Stop_Loss_Price;
+      if res.Entry_Price = 0.0 then
+         raise Constraint_Error;
+      end if;
 
-      elsif conf.Take_Profit_Multiplier /= 0.0
-        and then curr (Common.Bid_High) > res.Take_Profit_Price
-      then
-         res.Signal := 0;
-         res.Trigger := -1;
-         res.Exit_Price := res.Take_Profit_Price;
+      if conf.Use_Pinned_TPSL then
+         --  check for stop loss
+         --  check the take profit
+         if conf.Stop_Loss_Multiplier /= 0.0
+           and then res.Stop_Loss_Price > curr (Common.Bid_Low)
+         then
+            res.Signal := 0;
+            res.Trigger := res.Signal - last_res.Signal;
+            res.Exit_Price := res.Stop_Loss_Price;
+            res.Exit_Value := res.Exit_Price - res.Entry_Price;
+            if res.Exit_Price - res.Entry_Price > 0.0 then
+               raise Constraint_Error;
+            end if;
+
+         elsif conf.Take_Profit_Multiplier /= 0.0
+           and then res.Take_Profit_Price < curr (Common.Bid_High)
+         then
+            res.Signal := 0;
+            res.Trigger := res.Signal - last_res.Signal;
+            res.Exit_Price := res.Take_Profit_Price;
+            res.Exit_Value := res.Exit_Price - res.Entry_Price;
+            if res.Exit_Price - res.Entry_Price < 0.0 then
+               raise Constraint_Error;
+            end if;
+         end if;
+      --  else
+      --     declare
+      --        position : constant Long_Float := bid_exit_price - res.Entry_Price;
+      --     begin
+      --        if conf.Take_Profit_Multiplier /= 0.0
+      --          and then res.Trigger /= 1
+      --          and then position
+      --                   > curr (Common.ATR)
+      --                     * Long_Float (conf.Take_Profit_Multiplier)
+      --        then
+      --           res.Signal := 0;
+      --           res.Trigger := res.Signal - last_res.Signal;
+      --           res.Exit_Price := bid_exit_price;
+      --        end if;
+
+      --        if conf.Stop_Loss_Multiplier /= 0.0
+      --          and then position
+      --                   < -curr (Common.ATR)
+      --                     * Long_Float (conf.Stop_Loss_Multiplier)
+      --        then
+      --           res.Signal := 0;
+      --           if res.Trigger = 1 then
+      --              res.Entry_Price := 0.0;
+      --              res.Exit_Price := 0.0;
+      --           else
+      --              res.Exit_Price := bid_exit_price;
+      --           end if;
+      --           res.Trigger := res.Signal - last_res.Signal;
+      --        end if;
+      --     end;
       end if;
 
       --  update the running and exit totals
-      if res.Exit_Price /= 0.0 then
+      if res.Trigger = -1 then
          res.Exit_Value := res.Exit_Price - res.Entry_Price;
          res.Exit_Total := res.Exit_Total + res.Exit_Value;
          res.Running_Total := res.Exit_Total;
-      else
+      elsif res.Signal = 1 then
          res.Position := bid_exit_price - curr (Common.Ask_Close);
          res.Running_Total := res.Exit_Total + res.Position;
       end if;
 
       --  update max total
-      if res.Exit_Total > last_res.Max_Exit_Total then
+      if res.Exit_Total /= 0.0
+        and then res.Exit_Total > last_res.Max_Exit_Total
+      then
          res.Max_Exit_Total := res.Exit_Total;
       end if;
 
       --  update min total
-      if res.Exit_Total < last_res.Min_Exit_Total then
+      if res.Exit_Total /= 0.0
+        and then res.Exit_Total < last_res.Min_Exit_Total
+      then
          res.Min_Exit_Total := res.Exit_Total;
       end if;
 
@@ -201,11 +262,15 @@ package body Kernel is
          res.Losses := res.Losses + 1;
       end if;
 
+      if res.Trigger = -1 and then res.Exit_Price = 0.0 then
+         raise Constraint_Error;
+      end if;
+
       results (index) := res;
 
    end Kernel;
 
-   function Start_Processing
+   function Start_Procssing_Kernel
      (p : Common.Row_Pool; conf : Scenario_Config) return Scenario_Report
    is
       cur_scen_res : Scenario_Result (1 .. p'Length);
@@ -223,7 +288,7 @@ package body Kernel is
       end loop;
 
       --  skip further processing if criteria is not met
-      last_element := cur_scen_res (p'Length);
+      last_element := cur_scen_res (p'Length - 1);
       sr :=
         (Wins           => last_element.Wins,
          Losses         => last_element.Losses,
@@ -232,16 +297,25 @@ package body Kernel is
          Final_Total    => last_element.Exit_Total,
          Ratio          => 0.0,
          Config         => conf);
+      --  io.Put_Line
+      --     ("so :"  & sr.Config.WMA_Source_Key'Image
+      --     & " se:" & sr.Config.Entry_Key'Image
+      --     & " sx:" & sr.Config.Exit_Key'Image
+      --     & " tp:" & sr.Config.Take_Profit_Multiplier'Image
+      --     & " sl:" & sr.Config.Stop_Loss_Multiplier'Image
+      --     & " et :" & last_element.Exit_Total'Image
+      --     & " w :" & last_element.Wins'Image
+      --     & " l :" & last_element.Losses'Image);
 
       return sr;
-   end Start_Processing;
-
+   end Start_Procssing_Kernel;
 
    task body Process_Kernel is
       best_scenario_report : Scenario_Report;
       last_scenario_report : Scenario_Report;
       total_found          : Natural := 0;
       total_reported       : Natural := 0;
+      writers              : Natural := 0;
 
       procedure Update_Scenario_Internal (sr : Scenario_Report) is
          ratio : Float;
@@ -249,34 +323,29 @@ package body Kernel is
          last_scenario_report := sr;
          total_reported := total_reported + 1;
 
+         if best_scenario_report.Final_Total = Long_Float'First then
+            best_scenario_report := sr;
+         end if;
+
          if sr.Final_Total <= 0.0
-           or else abs (sr.Max_Exit_Total) <= abs (sr.Min_Exit_Total)
+           or else sr.Max_Exit_Total <= abs (sr.Min_Exit_Total)
          then
             return;
          end if;
 
          total_found := total_found + 1;
+         io.Put_Line (sr'Image);
 
          ratio :=
-           (if (sr.Wins + sr.Losses) > 0
-            then Float (sr.Wins / (sr.Wins + sr.Losses))
-            else Float (0.0));
+           (if sr.Wins + sr.Losses > 0
+            then Float (sr.Wins) / Float (sr.Wins + sr.Losses)
+            else 0.0);
 
-         if (best_scenario_report.Final_Total = 0.0)
-           or else (ratio > best_scenario_report.Ratio
-                    and then sr.Final_Total > best_scenario_report.Final_Total)
+         if ratio >= best_scenario_report.Ratio
+           and then sr.Final_Total >= best_scenario_report.Final_Total
          then
             best_scenario_report := sr;
             best_scenario_report.Ratio := ratio;
-            io.Put_Line ("----");
-            io.Put_Line ("w: " & sr.Wins'Image);
-            io.Put_Line ("l: " & sr.Losses'Image);
-            io.Put_Line ("et: " & sr.Final_Total'Image);
-            io.Put_Line ("r: " & best_scenario_report.Ratio'Image);
-            io.Put_Line ("entry: " & sr.Config.Entry_Key'Image);
-            io.Put_Line ("exit: " & sr.Config.Exit_Key'Image);
-            io.Put_Line ("wma: " & sr.Config.WMA_Source_Key'Image);
-            io.Put_Line ("----");
          end if;
 
       end Update_Scenario_Internal;
@@ -287,10 +356,28 @@ package body Kernel is
                declare
                   sr : Scenario_Report;
                begin
-                  sr := Start_Processing (p, conf);
+                  sr := Start_Procssing_Kernel (p, conf);
+                  writers := writers + 1;
                   Update_Scenario_Internal (sr);
+                  writers := writers - 1;
                end;
             end Start;
+         or
+            when writers = 0 =>
+            accept Update_Scenario (sr : Scenario_Report) do
+               writers := writers + 1;
+               Update_Scenario_Internal (sr);
+               writers := writers - 1;
+            end Update_Scenario;
+         or
+            when writers = 0 =>
+            accept Read (sr : out Scenario_Report; tf : out Natural) do
+               sr := best_scenario_report;
+               tf := total_found;
+               if sr.Final_Total = 0.0 then
+                  sr := last_scenario_report;
+               end if;
+            end Read;
          or
             terminate;
          end select;

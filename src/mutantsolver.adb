@@ -77,7 +77,7 @@ procedure Mutantsolver is
    total_time_duration : Ada.Real_Time.Time_Span;
 
    --  multithreading
-   num_tasks    : constant Positive := 12;
+   num_tasks    : constant Positive := 1;
    kernel_tasks :
      array (Positive range 1 .. num_tasks) of Kernel.Process_Kernel;
 
@@ -85,32 +85,108 @@ procedure Mutantsolver is
    best_scenario_report : Kernel.Scenario_Report;
    one_true_count       : Natural := 0;
    total_found          : Natural := 0;
+   temp_total_found : Natural := 0;
+   online_results : Kernel.Scenario_Result (1 .. chart.Online_Set_Size);
+   online_only : constant Boolean := False;
+   trades : Natural := 0;
 
 begin
+   for k in Common.Pool_Key'Range loop
+      io.Put_Line (k'Image & " => " & online_data_pool (chart.Online_Set_Size - 1) (k)'Image);
+   end loop;
+
+   --  for i in 20 .. chart.Online_Set_Size loop
+   --     Kernel.Kernel (online_data_pool (i), online_data_pool (i - 1),
+   --     (
+   --        WMA_Source_Key => WMA_HA_Bid_Low,
+   --        Entry_Key => Ask_Close,
+   --        Exit_Key => Mid_Low,
+   --        Take_Profit_Multiplier => 0.1,
+   --        Stop_Loss_Multiplier => 0.2,
+   --        Start_Index => 20,
+   --        Is_Quasi => False,
+   --        Num_Digits => 5,
+   --        Use_Pinned_TPSL => False
+   --        ), i, online_results);
+   --  end loop;
+
+   --  for i in 1 .. chart.Online_Set_Size loop
+   --     if online_results (i).Trigger = 1 then
+   --        trades := trades + 1;
+   --     end if;
+   --  end loop;
+   --  io.Put_Line ("trades: " & trades'Image);
+
+   --  io.Put_Line("signal, trigger, atr, wma, entry, exit, et");
+   --  for i in online_data_pool'Length - 3 .. online_data_pool'Length loop
+   --     io.Put_Line(online_results (i).Signal'Image & " " &
+   --                 online_results (i).Trigger'Image & " " &
+   --                 online_data_pool (i) (Common.ATR)'Image & " " &
+   --                 online_data_pool (i) (Common.WMA_HA_Bid_Low)'Image & " " &
+   --                 online_data_pool (i) (Common.Ask_Close)'Image & " " &
+   --                 online_data_pool (i) (Common.Mid_Low)'Image & " " &
+   --                 online_results (i).Exit_Total'Image);
+   --   end loop;
+
+   --  if online_only then
+   --     return;
+   --  end if;
+
+   io.Put_Line (offline_data_pool (1)'Length'Image);
+   io.Put_Line (offline_data_pool'Length'Image);
    start_time := Ada.Real_Time.Clock;
-   for entry_key in Common.Candle_Key'Range loop
-      for exit_key in Common.Candle_Key'Range loop
-         for wma_source_key in Common.WMA_Source_Key'Range loop
-            one_true_count := one_true_count + 1;
-            kernel_tasks (1 + (one_true_count mod num_tasks)).Start
-              (p    => offline_data_pool,
-               conf =>
-                 (Start_Index            => chart.Time_Period_Interval,
-                  Entry_Key              => entry_key,
-                  Exit_Key               => exit_key,
-                  WMA_Source_Key         => wma_source_key,
-                  Take_Profit_Multiplier => 0.0,
-                  Stop_Loss_Multiplier   => 0.0,
-                  Num_Digits             => chart.Num_Digits,
-                  Is_Quasi               => False));
+
+   --  queue the configs to the solver tasks
+   for wma_source_key in Common.WMA_Source_Key'Range loop
+      for entry_key in Common.Candle_Key'Range loop
+         for exit_key in Common.Candle_Key'Range loop
+            for take_profit_multiplier of Common.Take_Profit_Multipliers loop
+               for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
+                  one_true_count := one_true_count + 1;
+                  if one_true_count mod 100000 = 0 then
+                     io.Put_Line (one_true_count'Image);
+                  end if;
+                  kernel_tasks (1 + (one_true_count mod num_tasks)).Start
+                    (p    => offline_data_pool,
+                     conf =>
+                       (Start_Index            => chart.Time_Period_Interval,
+                        Entry_Key              => entry_key,
+                        Exit_Key               => exit_key,
+                        WMA_Source_Key         => wma_source_key,
+                        Take_Profit_Multiplier => take_profit_multiplier,
+                        Stop_Loss_Multiplier   => stop_loss_multiplier,
+                        Num_Digits             => chart.Num_Digits,
+                        Use_Pinned_TPSL => True,
+                        Is_Quasi               => False));
+               end loop;
+            end loop;
          end loop;
       end loop;
    end loop;
+
+   --  gather the reports and pick only the best
+   if kernel_tasks'Length > 1 then
+      for i in 2 .. kernel_tasks'Length loop
+         declare
+            temp_report      : Kernel.Scenario_Report;
+         begin
+            kernel_tasks (i).Read (temp_report, temp_total_found);
+            kernel_tasks (1).Update_Scenario (temp_report);
+            total_found := total_found + temp_total_found;
+         end;
+      end loop;
+   end if;
    end_time := Ada.Real_Time.Clock;
    total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
-   io.Put_Line (one_true_count'Image);
-   io.Put_Line (total_found'Image);
-   io.Put_Line (total_time_duration'Image);
+   kernel_tasks (1).Read (best_scenario_report, temp_total_found);
+   total_found := temp_total_found;
+
+   io.Put_Line ("found: " & total_found'Image & "/" & one_true_count'Image);
+
+   kernel_tasks (1).Read (best_scenario_report, temp_total_found);
+   io.Put_Line (best_scenario_report'Image);
+
+   io.Put_Line ("time: " & total_time_duration'Image & "s");
 
 end Mutantsolver;
