@@ -95,43 +95,6 @@ begin
       io.Put_Line (k'Image & " => " & online_data_pool (chart.Online_Set_Size - 1) (k)'Image);
    end loop;
 
-   --  for i in 20 .. chart.Online_Set_Size loop
-   --     Kernel.Kernel (online_data_pool (i), online_data_pool (i - 1),
-   --     (
-   --        WMA_Source_Key => WMA_HA_Bid_Low,
-   --        Entry_Key => Ask_Close,
-   --        Exit_Key => Mid_Low,
-   --        Take_Profit_Multiplier => 0.1,
-   --        Stop_Loss_Multiplier => 0.2,
-   --        Start_Index => 20,
-   --        Is_Quasi => False,
-   --        Num_Digits => 5,
-   --        Use_Pinned_TPSL => False
-   --        ), i, online_results);
-   --  end loop;
-
-   --  for i in 1 .. chart.Online_Set_Size loop
-   --     if online_results (i).Trigger = 1 then
-   --        trades := trades + 1;
-   --     end if;
-   --  end loop;
-   --  io.Put_Line ("trades: " & trades'Image);
-
-   --  io.Put_Line("signal, trigger, atr, wma, entry, exit, et");
-   --  for i in online_data_pool'Length - 3 .. online_data_pool'Length loop
-   --     io.Put_Line(online_results (i).Signal'Image & " " &
-   --                 online_results (i).Trigger'Image & " " &
-   --                 online_data_pool (i) (Common.ATR)'Image & " " &
-   --                 online_data_pool (i) (Common.WMA_HA_Bid_Low)'Image & " " &
-   --                 online_data_pool (i) (Common.Ask_Close)'Image & " " &
-   --                 online_data_pool (i) (Common.Mid_Low)'Image & " " &
-   --                 online_results (i).Exit_Total'Image);
-   --   end loop;
-
-   --  if online_only then
-   --     return;
-   --  end if;
-
    io.Put_Line (offline_data_pool (1)'Length'Image);
    io.Put_Line (offline_data_pool'Length'Image);
    start_time := Ada.Real_Time.Clock;
