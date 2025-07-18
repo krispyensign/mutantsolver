@@ -57,7 +57,7 @@ package body Kernel is
       --  close price to prevent order rejection
       if res.Stop_Loss_Price > curr (Common.Bid_Close) then
          res.Stop_Loss_Price :=
-           curr (Common.Bid_Close) - Long_Float (10.0**(-num_digits));
+           curr (Common.Bid_Close) - Long_Float (10.0 ** (-num_digits));
       end if;
 
    end Pin_Prices;
@@ -96,8 +96,7 @@ package body Kernel is
       results : in out Scenario_Result)
    is
       bid_exit_price : constant Long_Float :=
-        (if conf.Is_Quasi
-         then curr (Common.Bid_Open)
+        (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
 
       res      : Scenario_Result_Element := results (index);
@@ -120,6 +119,8 @@ package body Kernel is
       res.Max_Exit_Total := last_res.Max_Exit_Total;
       res.Wins := last_res.Wins;
       res.Losses := last_res.Losses;
+      res.Stop_Losses := last_res.Stop_Losses;
+      res.Take_Profits := last_res.Take_Profits;
 
       --  trigger, signal, notes
       --   0, 0, nothing
@@ -157,42 +158,34 @@ package body Kernel is
          res.Exit_Price := bid_exit_price;
       end if;
 
-      if not ((res.Trigger = -1 and then res.Signal = 0)
-                  or else (res.Trigger = 0 and then res.Signal = 1))
-      then
-         raise Constraint_Error;
-      end if;
+      pragma
+        Assert
+          (not ((res.Trigger = -1 and then res.Signal = 0)
+                or else (res.Trigger = 0 and then res.Signal = 1)));
 
       --  set the prices
       res.Set_Prices (last_res);
-
-      if res.Entry_Price = 0.0 then
-         raise Constraint_Error;
-      end if;
+      pragma Assert (res.Entry_Price /= 0.0);
 
       --  check for stop loss
       --  check the take profit
       if conf.Stop_Loss_Multiplier /= 0.0
-         and then res.Stop_Loss_Price > curr (Common.Bid_Low)
+        and then res.Stop_Loss_Price > curr (Common.Bid_Low)
       then
          res.Signal := 0;
          res.Trigger := res.Signal - last_res.Signal;
          res.Exit_Price := res.Stop_Loss_Price;
-         res.Exit_Value := res.Exit_Price - res.Entry_Price;
-         if res.Exit_Price - res.Entry_Price > 0.0 then
-            raise Constraint_Error;
-         end if;
+         res.Stop_Losses := res.Stop_Losses + 1;
+         pragma Assert (res.Exit_Price - res.Entry_Price < 0.0);
 
       elsif conf.Take_Profit_Multiplier /= 0.0
-         and then res.Take_Profit_Price < curr (Common.Bid_High)
+        and then res.Take_Profit_Price < curr (Common.Bid_High)
       then
          res.Signal := 0;
          res.Trigger := res.Signal - last_res.Signal;
          res.Exit_Price := res.Take_Profit_Price;
-         res.Exit_Value := res.Exit_Price - res.Entry_Price;
-         if res.Exit_Price - res.Entry_Price < 0.0 then
-            raise Constraint_Error;
-         end if;
+         res.Take_Profits := res.Take_Profits + 1;
+         pragma Assert (res.Exit_Price - res.Entry_Price > 0.0);
       end if;
 
       --  update the running and exit totals
@@ -259,6 +252,8 @@ package body Kernel is
          Max_Exit_Total => last_element.Max_Exit_Total,
          Min_Exit_Total => last_element.Min_Exit_Total,
          Final_Total    => last_element.Exit_Total,
+         Take_Profits   => last_element.Take_Profits,
+         Stop_Losses    => last_element.Stop_Losses,
          Ratio          => 0.0,
          Config         => conf);
       --  io.Put_Line
@@ -282,7 +277,7 @@ package body Kernel is
       writers              : Natural := 0;
 
       procedure Update_Scenario_Internal (sr : Scenario_Report) is
-         ratio : Float;
+         ratio : Float := 0.0;
       begin
          last_scenario_report := sr;
          total_reported := total_reported + 1;
@@ -291,25 +286,27 @@ package body Kernel is
             best_scenario_report := sr;
          end if;
 
+         if sr.Final_Total > 0.0 then
+            total_found := total_found + 1;
+         end if;
+
          if sr.Final_Total <= 0.0
            or else sr.Max_Exit_Total <= abs (sr.Min_Exit_Total)
          then
             return;
          end if;
 
-         total_found := total_found + 1;
-         io.Put_Line (sr'Image);
-
          ratio :=
            (if sr.Wins + sr.Losses > 0
             then Float (sr.Wins) / Float (sr.Wins + sr.Losses)
             else 0.0);
 
-         if ratio >= best_scenario_report.Ratio
-           and then sr.Final_Total >= best_scenario_report.Final_Total
+         if ratio > best_scenario_report.Ratio
+           and then sr.Final_Total > best_scenario_report.Final_Total
          then
             best_scenario_report := sr;
             best_scenario_report.Ratio := ratio;
+            io.Put_Line (best_scenario_report'Image);
          end if;
 
       end Update_Scenario_Internal;

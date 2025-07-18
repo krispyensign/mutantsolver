@@ -15,6 +15,8 @@ package Kernel is
       Running_Total     : Long_Float := 0.0;
       Exit_Value        : Long_Float := 0.0;
 
+      Take_Profits   : Natural := 0;
+      Stop_Losses    : Natural := 0;
       Exit_Total     : Long_Float := 0.0;
       Wins           : Natural := 0;
       Losses         : Natural := 0;
@@ -37,6 +39,8 @@ package Kernel is
       Config         : Scenario_Config;
       Wins           : Natural := 0;
       Losses         : Natural := 0;
+      Take_Profits   : Natural := 0;
+      Stop_Losses    : Natural := 0;
       Max_Exit_Total : Long_Float := Long_Float'First;
       Min_Exit_Total : Long_Float := Long_Float'Last;
       Ratio          : Float := 0.0;

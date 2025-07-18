@@ -41,9 +41,9 @@ procedure Mutantsolver is
    package offline_p is new Pools (Count => chart.Offline_Set_Size);
    offline_data_pool : constant Common.Row_Pool :=
      offline_p.Make_Row_Pool
-       ([for i in Common.Pool_Key'Range =>
-           offline_p.Swim_Lane
-             (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
+       ([for i in Common.Pool_Key'Range
+         => offline_p.Swim_Lane
+              (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
 
    --  tp_sl_offline_data_pool is a pool that contains a copied slice of the
    --  offline candles that will be used for solving for optimized take profit
@@ -54,13 +54,11 @@ procedure Mutantsolver is
      Pools (Count => chart.TP_SL_Offline_Set_Size);
    tp_sl_offline_data_pool : constant Common.Row_Pool :=
      tp_sl_offline_p.Make_Row_Pool
-       ([for key in Common.Pool_Key'Range =>
-           tp_sl_offline_p.Swim_Lane
-             (full_data_pool (key)
-                (chart.Offline_Set_Size
-                 - chart.TP_SL_Offline_Set_Size
-                 + 1
-                 .. chart.Offline_Set_Size))]);
+       ([for key in Common.Pool_Key'Range
+         => tp_sl_offline_p.Swim_Lane
+              (full_data_pool (key)
+                 (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
+                  .. chart.Offline_Set_Size))]);
 
    --  online_data_pool is a pool that contains the online candles that
    --  will not be solved for and are only used for zero knowledge evaluation
@@ -69,9 +67,9 @@ procedure Mutantsolver is
    package online_p is new Pools (Count => chart.Online_Set_Size);
    online_data_pool : constant Common.Row_Pool :=
      online_p.Make_Row_Pool
-       ([for i in Common.Pool_Key'Range =>
-           online_p.Swim_Lane
-             (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
+       ([for i in Common.Pool_Key'Range
+         => online_p.Swim_Lane
+              (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
 
    --  performance metrics
    start_time          : Ada.Real_Time.Time;
@@ -88,8 +86,15 @@ procedure Mutantsolver is
    one_true_count       : Natural := 0;
    total_found          : Natural := 0;
    temp_total_found     : Natural := 0;
+   offline_results      : Kernel.Scenario_Result (1 .. chart.Offline_Set_Size);
 
+   pragma Assert (offline_results'Length = chart.Offline_Set_Size);
+   pragma Assert (offline_data_pool'Length = chart.Offline_Set_Size);
+   pragma Assert (online_data_pool'Length = chart.Online_Set_Size);
+   pragma
+     Assert (tp_sl_offline_data_pool'Length = chart.TP_SL_Offline_Set_Size);
 begin
+
    for k in Common.Pool_Key'Range loop
       io.Put_Line
         (k'Image
@@ -107,6 +112,9 @@ begin
          for exit_key in Common.Candle_Key'Range loop
             for take_profit_multiplier of Common.Take_Profit_Multipliers loop
                for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
+                  if stop_loss_multiplier > take_profit_multiplier then
+                     goto Continue;
+                  end if;
                   one_true_count := one_true_count + 1;
                   if one_true_count mod 100000 = 0 then
                      io.Put_Line (one_true_count'Image);
@@ -123,6 +131,7 @@ begin
                         Num_Digits             => chart.Num_Digits,
                         Is_Quasi               => False));
                end loop;
+               <<Continue>>
             end loop;
          end loop;
       end loop;
@@ -146,11 +155,19 @@ begin
    kernel_tasks (1).Read (best_scenario_report, temp_total_found);
    total_found := temp_total_found;
 
-   io.Put_Line ("found: " & total_found'Image & "/" & one_true_count'Image);
+   for i in 20 .. chart.Offline_Set_Size loop
+      Kernel.Kernel
+        (curr    => offline_data_pool (i),
+         prev    => offline_data_pool (i - 1),
+         conf    => best_scenario_report.Config,
+         index   => i,
+         results => offline_results);
+      if offline_results (i).Trigger /= 0 then
+         io.Put_Line (offline_results (i)'Image);
+      end if;
+   end loop;
 
-   kernel_tasks (1).Read (best_scenario_report, temp_total_found);
    io.Put_Line (best_scenario_report'Image);
-
+   io.Put_Line ("found: " & total_found'Image & "/" & one_true_count'Image);
    io.Put_Line ("time: " & total_time_duration'Image & "s");
-
 end Mutantsolver;

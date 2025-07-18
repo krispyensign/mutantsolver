@@ -90,5 +90,5 @@ package Common is
       8.0];
 
    Stop_Loss_Multipliers : constant array (Positive range <>) of Float :=
-     [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0];
+     [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0];
 end Common;
