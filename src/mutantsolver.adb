@@ -22,6 +22,7 @@ procedure Mutantsolver is
      Config.Load_Chart_Config (result);
    count      : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
+
    --  initialize the Technical analysis library TA-Lib
    ta_result  : constant Integer := TA.TA_Initialize;
    --  fetch the candles
@@ -41,9 +42,9 @@ procedure Mutantsolver is
    package offline_p is new Pools (Count => chart.Offline_Set_Size);
    offline_data_pool : constant Common.Row_Pool :=
      offline_p.Make_Row_Pool
-       ([for i in Common.Pool_Key'Range
-         => offline_p.Swim_Lane
-              (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
+       ([for i in Common.Pool_Key'Range =>
+           offline_p.Swim_Lane
+             (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
 
    --  tp_sl_offline_data_pool is a pool that contains a copied slice of the
    --  offline candles that will be used for solving for optimized take profit
@@ -54,11 +55,13 @@ procedure Mutantsolver is
      Pools (Count => chart.TP_SL_Offline_Set_Size);
    tp_sl_offline_data_pool : constant Common.Row_Pool :=
      tp_sl_offline_p.Make_Row_Pool
-       ([for key in Common.Pool_Key'Range
-         => tp_sl_offline_p.Swim_Lane
-              (full_data_pool (key)
-                 (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
-                  .. chart.Offline_Set_Size))]);
+       ([for key in Common.Pool_Key'Range =>
+           tp_sl_offline_p.Swim_Lane
+             (full_data_pool (key)
+                (chart.Offline_Set_Size
+                 - chart.TP_SL_Offline_Set_Size
+                 + 1
+                 .. chart.Offline_Set_Size))]);
 
    --  online_data_pool is a pool that contains the online candles that
    --  will not be solved for and are only used for zero knowledge evaluation
@@ -67,9 +70,9 @@ procedure Mutantsolver is
    package online_p is new Pools (Count => chart.Online_Set_Size);
    online_data_pool : constant Common.Row_Pool :=
      online_p.Make_Row_Pool
-       ([for i in Common.Pool_Key'Range
-         => online_p.Swim_Lane
-              (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
+       ([for i in Common.Pool_Key'Range =>
+           online_p.Swim_Lane
+             (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
 
    --  performance metrics
    start_time          : Ada.Real_Time.Time;
@@ -87,6 +90,8 @@ procedure Mutantsolver is
    total_found          : Natural := 0;
    temp_total_found     : Natural := 0;
    offline_results      : Kernel.Scenario_Result (1 .. chart.Offline_Set_Size);
+   is_quasi             : Boolean := False;
+   should_roll          : Boolean := False;
 
    pragma Assert (offline_results'Length = chart.Offline_Set_Size);
    pragma Assert (offline_data_pool'Length = chart.Offline_Set_Size);
@@ -119,6 +124,23 @@ begin
                   if one_true_count mod 100000 = 0 then
                      io.Put_Line (one_true_count'Image);
                   end if;
+                  case exit_key is
+                     when Quasi_Keys =>
+                        is_quasi := True;
+
+                     when others =>
+                        is_quasi := False;
+                        should_roll := False;
+                  end case;
+                  if is_quasi then
+                     case wma_source_key is
+                        when WMA_Quasi_Keys =>
+                           should_roll := True;
+
+                        when others =>
+                           should_roll := False;
+                     end case;
+                  end if;
                   kernel_tasks (1 + (one_true_count mod num_tasks)).Start
                     (p    => offline_data_pool,
                      conf =>
@@ -129,7 +151,8 @@ begin
                         Take_Profit_Multiplier => take_profit_multiplier,
                         Stop_Loss_Multiplier   => stop_loss_multiplier,
                         Num_Digits             => chart.Num_Digits,
-                        Is_Quasi               => False));
+                        Is_Quasi               => is_quasi,
+                        Should_Roll            => should_roll));
                end loop;
                <<Continue>>
             end loop;

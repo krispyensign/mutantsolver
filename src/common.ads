@@ -63,7 +63,27 @@ package Common is
    subtype WMA_Source_Key is Pool_Key range WMA_Mid_Open .. WMA_HA_Bid_Close;
    subtype Candle_Key is Pool_Key range Mid_Open .. HA_Bid_Close;
    subtype Time_Key is Pool_Key range Time .. Time;
-   subtype Other_Key is Pool_Key range Volume .. ATR;
+   subtype Quasi_Keys is Candle_Key
+   with
+     Static_Predicate =>
+       Quasi_Keys
+       in Ask_Open
+        | Bid_Open
+        | Mid_Open
+        | HA_Ask_Open
+        | HA_Bid_Open
+        | HA_Mid_Open;
+
+   subtype WMA_Quasi_Keys is WMA_Source_Key
+   with
+     Static_Predicate =>
+       WMA_Quasi_Keys
+       in WMA_Ask_Open
+        | WMA_Bid_Open
+        | WMA_Mid_Open
+        | WMA_HA_Ask_Open
+        | WMA_HA_Bid_Open
+        | WMA_HA_Mid_Open;
 
    type Keyed_Lane is
      array (Common.Pool_Key range Common.Pool_Key'Range) of Long_Float;
@@ -91,4 +111,5 @@ package Common is
 
    Stop_Loss_Multipliers : constant array (Positive range <>) of Float :=
      [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0];
+
 end Common;
