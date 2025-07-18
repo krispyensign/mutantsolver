@@ -15,12 +15,11 @@ with Kernel;
 procedure Mutantsolver is
    package io renames Ada.Text_IO;
    --  load the configs from the toml files
-   result     : constant TOML.Read_Result :=
+   result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
-   oanda      : constant Config.Oanda_Access := Config.Load_Oanda (result);
-   chart      : constant Config.Chart_Config :=
-     Config.Load_Chart_Config (result);
-   count      : constant Positive :=
+   oanda  : constant Config.Oanda_Access := Config.Load_Oanda (result);
+   chart  : constant Config.Chart_Config := Config.Load_Chart_Config (result);
+   count  : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
 
    --  initialize the Technical analysis library TA-Lib
@@ -98,6 +97,30 @@ procedure Mutantsolver is
    pragma Assert (online_data_pool'Length = chart.Online_Set_Size);
    pragma
      Assert (tp_sl_offline_data_pool'Length = chart.TP_SL_Offline_Set_Size);
+
+   function Is_In_Quasi_Keys (exit_key : Common.Candle_Key) return Boolean is
+   begin
+      case exit_key is
+         when Quasi_Keys =>
+            return True;
+
+         when others =>
+            return False;
+      end case;
+   end Is_In_Quasi_Keys;
+
+   function Is_Not_In_WMA_Quasi_Keys
+     (wma_source_key : Common.WMA_Source_Key) return Boolean is
+   begin
+      case wma_source_key is
+         when WMA_Quasi_Keys =>
+            return False;
+
+         when others =>
+            return True;
+      end case;
+   end Is_Not_In_WMA_Quasi_Keys;
+
 begin
 
    for k in Common.Pool_Key'Range loop
@@ -117,30 +140,24 @@ begin
          for exit_key in Common.Candle_Key'Range loop
             for take_profit_multiplier of Common.Take_Profit_Multipliers loop
                for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
+                  --  prevent sl > tp
                   if stop_loss_multiplier > take_profit_multiplier then
                      goto Continue;
                   end if;
+
+                  --  log progress
                   one_true_count := one_true_count + 1;
                   if one_true_count mod 100000 = 0 then
                      io.Put_Line (one_true_count'Image);
                   end if;
-                  case exit_key is
-                     when Quasi_Keys =>
-                        is_quasi := True;
 
-                     when others =>
-                        is_quasi := False;
-                        should_roll := False;
-                  end case;
+                  --  determine quasi and if we should roll
+                  is_quasi := Is_In_Quasi_Keys (exit_key);
                   if is_quasi then
-                     case wma_source_key is
-                        when WMA_Quasi_Keys =>
-                           should_roll := True;
-
-                        when others =>
-                           should_roll := False;
-                     end case;
+                     should_roll := Is_Not_In_WMA_Quasi_Keys (wma_source_key);
                   end if;
+
+                  --  start the task
                   kernel_tasks (1 + (one_true_count mod num_tasks)).Start
                     (p    => offline_data_pool,
                      conf =>
@@ -178,13 +195,14 @@ begin
    kernel_tasks (1).Read (best_scenario_report, temp_total_found);
    total_found := temp_total_found;
 
-   for i in 20 .. chart.Offline_Set_Size loop
+   for i in chart.Time_Period_Interval .. chart.Offline_Set_Size loop
       Kernel.Kernel
-        (curr    => offline_data_pool (i),
-         prev    => offline_data_pool (i - 1),
-         conf    => best_scenario_report.Config,
-         index   => i,
-         results => offline_results);
+        (curr      => offline_data_pool (i),
+         prev      => offline_data_pool (i - 1),
+         prev_prev => offline_data_pool (i - 2),
+         conf      => best_scenario_report.Config,
+         index     => i,
+         results   => offline_results);
       if offline_results (i).Trigger /= 0 then
          io.Put_Line (offline_results (i)'Image);
       end if;

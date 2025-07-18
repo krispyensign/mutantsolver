@@ -57,7 +57,7 @@ package body Kernel is
       --  close price to prevent order rejection
       if res.Stop_Loss_Price > curr (Common.Bid_Close) then
          res.Stop_Loss_Price :=
-           curr (Common.Bid_Close) - Long_Float (10.0 ** (-num_digits));
+           curr (Common.Bid_Close) - Long_Float (10.0**(-num_digits));
       end if;
 
    end Pin_Prices;
@@ -65,17 +65,24 @@ package body Kernel is
    function Calc_WMA_Signal
      (curr           : Common.Keyed_Lane;
       prev           : Common.Keyed_Lane;
+      prev_prev      : Common.Keyed_Lane;
+      should_roll    : Boolean;
       entry_key      : Common.Candle_Key;
       exit_key       : Common.Candle_Key;
       wma_source_key : Common.WMA_Source_Key;
       last_res       : Scenario_Result_Element) return Scenario_Result_Element
    is
+      curr_wma_source  : constant Long_Float :=
+        (if should_roll then prev (wma_source_key) else curr (wma_source_key));
+      prev_wma_source  : constant Long_Float :=
+        (if should_roll
+         then prev_prev (wma_source_key)
+         else prev (wma_source_key));
       buy_signal       : constant Boolean :=
-        curr (entry_key) > curr (wma_source_key);
+        curr (entry_key) > curr_wma_source;
       prior_buy_signal : constant Boolean :=
-        prev (entry_key) > prev (wma_source_key);
-      exit_signal      : constant Boolean :=
-        curr (exit_key) > curr (wma_source_key);
+        prev (entry_key) > prev_wma_source;
+      exit_signal      : constant Boolean := curr (exit_key) > curr_wma_source;
       res              : Scenario_Result_Element;
    begin
       res.Signal :=
@@ -90,14 +97,16 @@ package body Kernel is
    end Calc_WMA_Signal;
 
    procedure Kernel
-     (curr    : Common.Keyed_Lane;
-      prev    : Common.Keyed_Lane;
-      conf    : Scenario_Config;
-      index   : Positive;
-      results : in out Scenario_Result)
+     (curr      : Common.Keyed_Lane;
+      prev      : Common.Keyed_Lane;
+      prev_prev : Common.Keyed_Lane;
+      conf      : Scenario_Config;
+      index     : Positive;
+      results   : in out Scenario_Result)
    is
       bid_exit_price : constant Long_Float :=
-        (if conf.Is_Quasi then curr (Common.Bid_Open)
+        (if conf.Is_Quasi
+         then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
 
       res      : Scenario_Result_Element := results (index);
@@ -109,6 +118,8 @@ package body Kernel is
         Calc_WMA_Signal
           (curr,
            prev,
+           prev_prev,
+           conf.Should_Roll,
            conf.Entry_Key,
            conf.Exit_Key,
            conf.WMA_Source_Key,
@@ -236,13 +247,14 @@ package body Kernel is
       sr           : Scenario_Report;
    begin
       for i in conf.Start_Index .. p'Length loop
-         --  calculate iteration
+
          Kernel
-           (curr    => p (i),
-            prev    => p (i - 1),
-            index   => i,
-            conf    => conf,
-            results => cur_scen_res);
+           (curr      => p (i),
+            prev      => p (i - 1),
+            prev_prev => p (i - 2),
+            index     => i,
+            conf      => conf,
+            results   => cur_scen_res);
       end loop;
 
       --  skip further processing if criteria is not met

@@ -62,6 +62,7 @@ package Kernel is
    procedure Kernel
      (curr    : Common.Keyed_Lane;
       prev    : Common.Keyed_Lane;
+      prev_prev : Common.Keyed_Lane;
       conf    : Scenario_Config;
       index   : Positive;
       results : in out Scenario_Result);
