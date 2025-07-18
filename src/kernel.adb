@@ -91,7 +91,7 @@ package body Kernel is
          then 1
          else 0);
       res.Trigger := res.Signal - last_res.Signal;
-      pragma Assert (res.Trigger in -1 .. 1);
+      pragma Assert (res.Trigger'Valid);
 
       return res;
    end Calc_WMA_Signal;

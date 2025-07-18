@@ -4,7 +4,6 @@ with Config;
 with TOML;
 with TOML.File_IO;
 with Oanda_Exchange;
-with TA;
 with Core;
 with Pools;
 with Common; use Common;
