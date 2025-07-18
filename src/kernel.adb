@@ -84,6 +84,7 @@ package body Kernel is
          then 1
          else 0);
       res.Trigger := res.Signal - last_res.Signal;
+      pragma Assert (res.Trigger in -1 .. 1);
 
       return res;
    end Calc_WMA_Signal;
@@ -173,7 +174,8 @@ package body Kernel is
         and then res.Stop_Loss_Price > curr (Common.Bid_Low)
       then
          res.Signal := 0;
-         res.Trigger := res.Signal - last_res.Signal;
+         res.Trigger := -1;
+         pragma Assert (last_res.Signal = 1);
          res.Exit_Price := res.Stop_Loss_Price;
          res.Stop_Losses := res.Stop_Losses + 1;
          pragma Assert (res.Exit_Price - res.Entry_Price < 0.0);
@@ -182,7 +184,8 @@ package body Kernel is
         and then res.Take_Profit_Price < curr (Common.Bid_High)
       then
          res.Signal := 0;
-         res.Trigger := res.Signal - last_res.Signal;
+         res.Trigger := -1;
+         pragma Assert (last_res.Signal = 1);
          res.Exit_Price := res.Take_Profit_Price;
          res.Take_Profits := res.Take_Profits + 1;
          pragma Assert (res.Exit_Price - res.Entry_Price > 0.0);
@@ -190,10 +193,13 @@ package body Kernel is
 
       --  update the running and exit totals
       if res.Trigger = -1 then
+         pragma Assert (res.Exit_Price /= 0.0);
+         pragma Assert (res.Entry_Price /= 0.0);
          res.Exit_Value := res.Exit_Price - res.Entry_Price;
          res.Exit_Total := res.Exit_Total + res.Exit_Value;
          res.Running_Total := res.Exit_Total;
-      elsif res.Signal = 1 then
+      else
+         pragma Assert (res.Signal = 1);
          res.Position := bid_exit_price - curr (Common.Ask_Close);
          res.Running_Total := res.Exit_Total + res.Position;
       end if;
@@ -217,10 +223,6 @@ package body Kernel is
          res.Wins := res.Wins + 1;
       elsif res.Exit_Value < 0.0 then
          res.Losses := res.Losses + 1;
-      end if;
-
-      if res.Trigger = -1 and then res.Exit_Price = 0.0 then
-         raise Constraint_Error;
       end if;
 
       results (index) := res;
