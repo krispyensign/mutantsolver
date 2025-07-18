@@ -22,8 +22,6 @@ procedure Mutantsolver is
    count  : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
 
-   --  initialize the Technical analysis library TA-Lib
-   ta_result  : constant Integer := TA.TA_Initialize;
    --  fetch the candles
    ex_candles : constant Core.Candles (1 .. count) :=
      Oanda_Exchange.Fetch_Candles (oanda, chart);
@@ -221,7 +219,8 @@ begin
    end loop;
 
    io.Put_Line (best_scenario_report'Image);
-   io.Put_Line ("zk : " & online_results (chart.Online_Set_Size).Exit_Total'Image);
+   io.Put_Line
+     ("zk : " & online_results (chart.Online_Set_Size).Exit_Total'Image);
    io.Put_Line ("found: " & total_found'Image & "/" & one_true_count'Image);
    io.Put_Line ("time: " & total_time_duration'Image & "s");
 end Mutantsolver;

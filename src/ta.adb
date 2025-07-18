@@ -14,6 +14,13 @@ package body TA is
       temp     : Common.Real_Array (1 .. in_high'Length);
       out_real : Common.Real_Array (1 .. in_high'Length);
    begin
+      if not is_initialized then
+         result := TA_Initialize;
+         if result /= 0 then
+            raise Program_Error;
+         end if;
+         is_initialized := True;
+      end if;
       result :=
         TA_ATR
           (startIdx        => Interfaces.C.int (0),
@@ -43,6 +50,13 @@ package body TA is
       temp     : Common.Real_Array (1 .. in_real'Length);
       out_real : Common.Real_Array (1 .. in_real'Length);
    begin
+      if not is_initialized then
+         result := TA_Initialize;
+         if result /= 0 then
+            raise Program_Error;
+         end if;
+         is_initialized := True;
+      end if;
       result :=
         TA_WMA
           (startIdx        => Interfaces.C.int (0),
