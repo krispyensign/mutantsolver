@@ -27,6 +27,7 @@ package Kernel is
    type Scenario_Config is tagged record
       Start_Index            : Positive;
       Is_Quasi               : Boolean := False;
+      Should_Roll            : Boolean := False;
       Num_Digits             : Positive := 5;
       Take_Profit_Multiplier : Float := 0.0;
       Stop_Loss_Multiplier   : Float := 0.0;
@@ -61,6 +62,7 @@ package Kernel is
    procedure Kernel
      (curr    : Common.Keyed_Lane;
       prev    : Common.Keyed_Lane;
+      prev_prev : Common.Keyed_Lane;
       conf    : Scenario_Config;
       index   : Positive;
       results : in out Scenario_Result);

@@ -57,7 +57,7 @@ package body Kernel is
       --  close price to prevent order rejection
       if res.Stop_Loss_Price > curr (Common.Bid_Close) then
          res.Stop_Loss_Price :=
-           curr (Common.Bid_Close) - Long_Float (10.0 ** (-num_digits));
+           curr (Common.Bid_Close) - Long_Float (10.0**(-num_digits));
       end if;
 
    end Pin_Prices;
@@ -65,17 +65,24 @@ package body Kernel is
    function Calc_WMA_Signal
      (curr           : Common.Keyed_Lane;
       prev           : Common.Keyed_Lane;
+      prev_prev      : Common.Keyed_Lane;
+      should_roll    : Boolean;
       entry_key      : Common.Candle_Key;
       exit_key       : Common.Candle_Key;
       wma_source_key : Common.WMA_Source_Key;
       last_res       : Scenario_Result_Element) return Scenario_Result_Element
    is
+      curr_wma_source  : constant Long_Float :=
+        (if should_roll then prev (wma_source_key) else curr (wma_source_key));
+      prev_wma_source  : constant Long_Float :=
+        (if should_roll
+         then prev_prev (wma_source_key)
+         else prev (wma_source_key));
       buy_signal       : constant Boolean :=
-        curr (entry_key) > curr (wma_source_key);
+        curr (entry_key) > curr_wma_source;
       prior_buy_signal : constant Boolean :=
-        prev (entry_key) > prev (wma_source_key);
-      exit_signal      : constant Boolean :=
-        curr (exit_key) > curr (wma_source_key);
+        prev (entry_key) > prev_wma_source;
+      exit_signal      : constant Boolean := curr (exit_key) > curr_wma_source;
       res              : Scenario_Result_Element;
    begin
       res.Signal :=
@@ -84,19 +91,22 @@ package body Kernel is
          then 1
          else 0);
       res.Trigger := res.Signal - last_res.Signal;
+      pragma Assert (res.Trigger in -1 .. 1);
 
       return res;
    end Calc_WMA_Signal;
 
    procedure Kernel
-     (curr    : Common.Keyed_Lane;
-      prev    : Common.Keyed_Lane;
-      conf    : Scenario_Config;
-      index   : Positive;
-      results : in out Scenario_Result)
+     (curr      : Common.Keyed_Lane;
+      prev      : Common.Keyed_Lane;
+      prev_prev : Common.Keyed_Lane;
+      conf      : Scenario_Config;
+      index     : Positive;
+      results   : in out Scenario_Result)
    is
       bid_exit_price : constant Long_Float :=
-        (if conf.Is_Quasi then curr (Common.Bid_Open)
+        (if conf.Is_Quasi
+         then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
 
       res      : Scenario_Result_Element := results (index);
@@ -108,6 +118,8 @@ package body Kernel is
         Calc_WMA_Signal
           (curr,
            prev,
+           prev_prev,
+           conf.Should_Roll,
            conf.Entry_Key,
            conf.Exit_Key,
            conf.WMA_Source_Key,
@@ -158,13 +170,12 @@ package body Kernel is
          res.Exit_Price := bid_exit_price;
       end if;
 
+      --  set the prices
+      res.Set_Prices (last_res);
       pragma
         Assert
           (not ((res.Trigger = -1 and then res.Signal = 0)
                 or else (res.Trigger = 0 and then res.Signal = 1)));
-
-      --  set the prices
-      res.Set_Prices (last_res);
       pragma Assert (res.Entry_Price /= 0.0);
 
       --  check for stop loss
@@ -173,18 +184,20 @@ package body Kernel is
         and then res.Stop_Loss_Price > curr (Common.Bid_Low)
       then
          res.Signal := 0;
-         res.Trigger := res.Signal - last_res.Signal;
+         res.Trigger := -1;
          res.Exit_Price := res.Stop_Loss_Price;
          res.Stop_Losses := res.Stop_Losses + 1;
+         pragma Assert (last_res.Signal = 1);
          pragma Assert (res.Exit_Price - res.Entry_Price < 0.0);
 
       elsif conf.Take_Profit_Multiplier /= 0.0
         and then res.Take_Profit_Price < curr (Common.Bid_High)
       then
          res.Signal := 0;
-         res.Trigger := res.Signal - last_res.Signal;
+         res.Trigger := -1;
          res.Exit_Price := res.Take_Profit_Price;
          res.Take_Profits := res.Take_Profits + 1;
+         pragma Assert (last_res.Signal = 1);
          pragma Assert (res.Exit_Price - res.Entry_Price > 0.0);
       end if;
 
@@ -193,9 +206,12 @@ package body Kernel is
          res.Exit_Value := res.Exit_Price - res.Entry_Price;
          res.Exit_Total := res.Exit_Total + res.Exit_Value;
          res.Running_Total := res.Exit_Total;
-      elsif res.Signal = 1 then
+         pragma Assert (res.Exit_Price /= 0.0);
+         pragma Assert (res.Entry_Price /= 0.0);
+      else
          res.Position := bid_exit_price - curr (Common.Ask_Close);
          res.Running_Total := res.Exit_Total + res.Position;
+         pragma Assert (res.Signal = 1);
       end if;
 
       --  update max total
@@ -219,10 +235,6 @@ package body Kernel is
          res.Losses := res.Losses + 1;
       end if;
 
-      if res.Trigger = -1 and then res.Exit_Price = 0.0 then
-         raise Constraint_Error;
-      end if;
-
       results (index) := res;
 
    end Kernel;
@@ -235,13 +247,14 @@ package body Kernel is
       sr           : Scenario_Report;
    begin
       for i in conf.Start_Index .. p'Length loop
-         --  calculate iteration
+
          Kernel
-           (curr    => p (i),
-            prev    => p (i - 1),
-            index   => i,
-            conf    => conf,
-            results => cur_scen_res);
+           (curr      => p (i),
+            prev      => p (i - 1),
+            prev_prev => p (i - 2),
+            index     => i,
+            conf      => conf,
+            results   => cur_scen_res);
       end loop;
 
       --  skip further processing if criteria is not met
