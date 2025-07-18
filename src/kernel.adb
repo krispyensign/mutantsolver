@@ -159,13 +159,12 @@ package body Kernel is
          res.Exit_Price := bid_exit_price;
       end if;
 
+      --  set the prices
+      res.Set_Prices (last_res);
       pragma
         Assert
           (not ((res.Trigger = -1 and then res.Signal = 0)
                 or else (res.Trigger = 0 and then res.Signal = 1)));
-
-      --  set the prices
-      res.Set_Prices (last_res);
       pragma Assert (res.Entry_Price /= 0.0);
 
       --  check for stop loss
@@ -175,9 +174,9 @@ package body Kernel is
       then
          res.Signal := 0;
          res.Trigger := -1;
-         pragma Assert (last_res.Signal = 1);
          res.Exit_Price := res.Stop_Loss_Price;
          res.Stop_Losses := res.Stop_Losses + 1;
+         pragma Assert (last_res.Signal = 1);
          pragma Assert (res.Exit_Price - res.Entry_Price < 0.0);
 
       elsif conf.Take_Profit_Multiplier /= 0.0
@@ -185,23 +184,23 @@ package body Kernel is
       then
          res.Signal := 0;
          res.Trigger := -1;
-         pragma Assert (last_res.Signal = 1);
          res.Exit_Price := res.Take_Profit_Price;
          res.Take_Profits := res.Take_Profits + 1;
+         pragma Assert (last_res.Signal = 1);
          pragma Assert (res.Exit_Price - res.Entry_Price > 0.0);
       end if;
 
       --  update the running and exit totals
       if res.Trigger = -1 then
-         pragma Assert (res.Exit_Price /= 0.0);
-         pragma Assert (res.Entry_Price /= 0.0);
          res.Exit_Value := res.Exit_Price - res.Entry_Price;
          res.Exit_Total := res.Exit_Total + res.Exit_Value;
          res.Running_Total := res.Exit_Total;
+         pragma Assert (res.Exit_Price /= 0.0);
+         pragma Assert (res.Entry_Price /= 0.0);
       else
-         pragma Assert (res.Signal = 1);
          res.Position := bid_exit_price - curr (Common.Ask_Close);
          res.Running_Total := res.Exit_Total + res.Position;
+         pragma Assert (res.Signal = 1);
       end if;
 
       --  update max total
