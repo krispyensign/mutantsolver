@@ -202,9 +202,9 @@ begin
          conf      => best_scenario_report.Config,
          index     => i,
          results   => offline_results);
-      if offline_results (i).Trigger /= 0 then
-         io.Put_Line (offline_results (i)'Image);
-      end if;
+      --  if offline_results (i).Trigger /= 0 then
+      --     io.Put_Line (offline_results (i)'Image);
+      --  end if;
    end loop;
 
    for i in chart.Time_Period_Interval .. chart.Online_Set_Size loop
