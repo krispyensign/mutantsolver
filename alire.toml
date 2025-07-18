@@ -22,3 +22,6 @@ utilada_curl = "^2.8.0"
 
 [[depends-on]]
 gnatcoll = "^25.0.0"
+
+[[depends-on]]
+gnatprove = "^15.1.0"
