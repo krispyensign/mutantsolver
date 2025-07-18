@@ -1,6 +1,5 @@
 pragma Ada_2022;
 with Ada.Calendar;
-with Common;
 
 package Core is
    package calendar renames Ada.Calendar;
@@ -22,34 +21,6 @@ package Core is
 
    subtype Signal_T is Integer range 0 .. 1;
    subtype Trigger_T is Integer range -1 .. 1;
-
-   type Scenario_Result is tagged record
-      Entry_Price       : Long_Float;
-      Exit_Price        : Long_Float;
-      Position          : Long_Float;
-      Signal            : Signal_T;
-      Trigger           : Trigger_T;
-      Take_Profit_Price : Long_Float;
-      Stop_Loss_Price   : Long_Float;
-      Running_Total     : Long_Float;
-      Exit_Value : Long_Float;
-      Exit_Total : Long_Float;
-   end record;
-
-   type Scenario is record
-      Is_Quasi               : Boolean;
-      Num_Digits             : Positive;
-      Take_Profit_Multiplier : Float;
-      Stop_Loss_Multiplier   : Float;
-      Precision              : Positive;
-      Entry_Key              : Common.Pool_Key;
-      Exit_Key               : Common.Pool_Key;
-      WMA_Source_Key         : Common.Pool_Key;
-   end record;
-
-   procedure Reset (res : in out Scenario_Result'Class);
-   procedure Set_Prices
-     (res : in out Scenario_Result'Class; last_res : Scenario_Result'Class);
 
    function Make_HA_Candle
      (current_candle : Candle_Base'Class; previous_candle : Candle_Base'Class)
