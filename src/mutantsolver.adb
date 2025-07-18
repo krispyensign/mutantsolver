@@ -89,6 +89,7 @@ procedure Mutantsolver is
    total_found          : Natural := 0;
    temp_total_found     : Natural := 0;
    offline_results      : Kernel.Scenario_Result (1 .. chart.Offline_Set_Size);
+   online_results       : Kernel.Scenario_Result (1 .. chart.Online_Set_Size);
    is_quasi             : Boolean := False;
    should_roll          : Boolean := False;
 
@@ -97,6 +98,7 @@ procedure Mutantsolver is
    pragma Assert (online_data_pool'Length = chart.Online_Set_Size);
    pragma
      Assert (tp_sl_offline_data_pool'Length = chart.TP_SL_Offline_Set_Size);
+   pragma Assert (online_results'Length = chart.Online_Set_Size);
 
    function Is_In_Quasi_Keys (exit_key : Common.Candle_Key) return Boolean is
    begin
@@ -208,7 +210,18 @@ begin
       end if;
    end loop;
 
+   for i in chart.Time_Period_Interval .. chart.Online_Set_Size loop
+      Kernel.Kernel
+        (curr      => online_data_pool (i),
+         prev      => online_data_pool (i - 1),
+         prev_prev => online_data_pool (i - 2),
+         conf      => best_scenario_report.Config,
+         index     => i,
+         results   => online_results);
+   end loop;
+
    io.Put_Line (best_scenario_report'Image);
+   io.Put_Line ("zk : " & online_results (chart.Online_Set_Size).Exit_Total'Image);
    io.Put_Line ("found: " & total_found'Image & "/" & one_true_count'Image);
    io.Put_Line ("time: " & total_time_duration'Image & "s");
 end Mutantsolver;
