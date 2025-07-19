@@ -1,6 +1,9 @@
 pragma Ada_2022;
 
+with Ada.Calendar;
+with Ada.Calendar.Conversions;
 with Config;
+with Interfaces.C;
 with TOML;
 with TOML.File_IO;
 with Oanda_Exchange;
@@ -89,6 +92,7 @@ procedure Mutantsolver is
    online_results       : Kernel.Scenario_Result (1 .. chart.Online_Set_Size);
    is_quasi             : Boolean := False;
    should_roll          : Boolean := False;
+   throughput           : Float := 0.0;
 
    pragma Assert (offline_results'Length = chart.Offline_Set_Size);
    pragma Assert (offline_data_pool'Length = chart.Offline_Set_Size);
@@ -140,9 +144,10 @@ begin
             for take_profit_multiplier of Common.Take_Profit_Multipliers loop
                for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
                   --  prevent sl > tp
-                  if stop_loss_multiplier > take_profit_multiplier then
-                     goto Continue;
-                  end if;
+                  --  TODO make this toggle
+                  --  if stop_loss_multiplier > take_profit_multiplier then
+                  --     goto Continue;
+                  --  end if;
 
                   --  log progress
                   one_true_count := one_true_count + 1;
@@ -222,4 +227,8 @@ begin
      ("zk : " & online_results (chart.Online_Set_Size).Exit_Total'Image);
    io.Put_Line ("found: " & total_found'Image & "/" & one_true_count'Image);
    io.Put_Line ("time: " & total_time_duration'Image & "s");
+   throughput :=
+     Float (one_true_count)
+     / Float (Ada.Real_Time.To_Duration (total_time_duration));
+   io.Put_Line ("throughput : " & throughput'Image);
 end Mutantsolver;

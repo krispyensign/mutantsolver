@@ -303,6 +303,12 @@ package body Kernel is
             total_found := total_found + 1;
          end if;
 
+         if best_scenario_report.Final_Total <= 0.0 
+            and then sr.Final_Total > best_scenario_report.Final_Total then
+            best_scenario_report := sr;
+            io.Put_Line (best_scenario_report'Image);
+         end if;
+
          if sr.Final_Total <= 0.0
            or else sr.Max_Exit_Total <= abs (sr.Min_Exit_Total)
          then
