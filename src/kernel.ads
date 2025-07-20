@@ -53,7 +53,7 @@ private
      (res : in out Kernel_Element'Class; reference_res : Kernel_Element'Class);
 
    --  pin the prices to the current candle
-   procedure Pin_Prices
+   procedure Pin_Entry_TPSL_Prices
      (res                    : in out Kernel_Element'Class;
       ask_close              : Long_Float;
       bid_close              : Long_Float;
@@ -71,10 +71,10 @@ private
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
 
    --  execute the stop loss strategy
-   procedure Execute_Stop_Loss (res : in out Kernel_Element'Class);
+   procedure Trigger_Stop_Loss (res : in out Kernel_Element'Class);
 
    --  execute the take profit strategy
-   procedure Execute_Take_Profit (res : in out Kernel_Element'Class);
+   procedure Trigger_Take_Profit (res : in out Kernel_Element'Class);
 
    --  update the min and max exit totals
    procedure Update_Min_Max_Totals

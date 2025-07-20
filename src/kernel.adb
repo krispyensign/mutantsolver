@@ -39,7 +39,7 @@ package body Kernel is
       res.Take_Profits := last_res.Take_Profits;
    end Carry_Over_Totals;
 
-   procedure Pin_Prices
+   procedure Pin_Entry_TPSL_Prices
      (res                    : in out Kernel_Element'Class;
       ask_close              : Long_Float;
       bid_close              : Long_Float;
@@ -68,25 +68,25 @@ package body Kernel is
          res.Stop_Loss_Price := bid_close - Long_Float (10.0 ** (-num_digits));
       end if;
 
-   end Pin_Prices;
+   end Pin_Entry_TPSL_Prices;
 
-   procedure Execute_Stop_Loss (res : in out Kernel_Element'Class) is
+   procedure Trigger_Stop_Loss (res : in out Kernel_Element'Class) is
    begin
       res.Signal := 0;
       res.Trigger := -1;
       res.Exit_Price := res.Stop_Loss_Price;
       res.Stop_Losses := res.Stop_Losses + 1;
       pragma Assert (res.Exit_Price - res.Entry_Price < 0.0);
-   end Execute_Stop_Loss;
+   end Trigger_Stop_Loss;
 
-   procedure Execute_Take_Profit (res : in out Kernel_Element'Class) is
+   procedure Trigger_Take_Profit (res : in out Kernel_Element'Class) is
    begin
       res.Signal := 0;
       res.Trigger := -1;
       res.Exit_Price := res.Take_Profit_Price;
       res.Take_Profits := res.Take_Profits + 1;
       pragma Assert (res.Exit_Price - res.Entry_Price > 0.0);
-   end Execute_Take_Profit;
+   end Trigger_Take_Profit;
 
    procedure Update_Min_Max_Totals
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class) is
@@ -216,7 +216,7 @@ package body Kernel is
          return;
       elsif res.Trigger = 1 and then res.Signal = 1 then
          --  wma cross so pin the prices
-         res.Pin_Prices
+         res.Pin_Entry_TPSL_Prices
            (ask_close              => curr (Common.Ask_Close),
             bid_close              => curr (Common.Bid_Close),
             atr                    => curr (Common.ATR),
@@ -244,12 +244,12 @@ package body Kernel is
       if conf.Stop_Loss_Multiplier /= 0.0
         and then res.Stop_Loss_Price > curr (Common.Bid_Low)
       then
-         res.Execute_Stop_Loss;
+         res.Trigger_Stop_Loss;
          pragma Assert (last_res.Signal = 1);
       elsif conf.Take_Profit_Multiplier /= 0.0
         and then res.Take_Profit_Price < curr (Common.Bid_High)
       then
-         res.Execute_Take_Profit;
+         res.Trigger_Take_Profit;
          pragma Assert (last_res.Signal = 1);
       end if;
 
