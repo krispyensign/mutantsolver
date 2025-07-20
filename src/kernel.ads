@@ -48,34 +48,48 @@ package Kernel is
 
 private
 
+   --  reset the Kernel_Element to a reference state
    procedure Reset
      (res : in out Kernel_Element'Class; reference_res : Kernel_Element'Class);
 
+   --  pin the prices to the current candle
    procedure Pin_Prices
      (res                    : in out Kernel_Element'Class;
-      ask_close : Long_Float;
-      bid_close : Long_Float;
-      atr : Long_Float;
+      ask_close              : Long_Float;
+      bid_close              : Long_Float;
+      atr                    : Long_Float;
       take_profit_multiplier : Float;
       stop_loss_multiplier   : Float;
       num_digits             : Positive);
 
+   --  carry over prices from the last Kernel_Element
    procedure Carry_Over_Prices
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
 
+   --  carry over totals from the last Kernel_Element
    procedure Carry_Over_Totals
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
 
+   --  execute the stop loss strategy
    procedure Execute_Stop_Loss (res : in out Kernel_Element'Class);
+
+   --  execute the take profit strategy
    procedure Execute_Take_Profit (res : in out Kernel_Element'Class);
+
+   --  update the min and max exit totals
    procedure Update_Min_Max_Totals
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
+
+   --  update the wins and losses
    procedure Update_Wins_Losses (res : in out Kernel_Element'Class);
+
+   --  update the exit totals
    procedure Update_Exit_Totals (res : in out Kernel_Element'Class);
+
+   --  update the position based on the exit price
    procedure Update_Position
      (res            : in out Kernel_Element'Class;
       bid_exit_price : Long_Float;
       ask_close      : Long_Float);
-
 
 end Kernel;

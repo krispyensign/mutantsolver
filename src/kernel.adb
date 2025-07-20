@@ -65,7 +65,7 @@ package body Kernel is
       --  if sl is greater than the bid at close the set just below the bid
       --  close price to prevent order rejection
       if res.Stop_Loss_Price > bid_close then
-         res.Stop_Loss_Price := bid_close - Long_Float (10.0**(-num_digits));
+         res.Stop_Loss_Price := bid_close - Long_Float (10.0 ** (-num_digits));
       end if;
 
    end Pin_Prices;
@@ -143,8 +143,7 @@ package body Kernel is
       curr_wma_source  : constant Long_Float :=
         (if should_roll then prev (wma_source_key) else curr (wma_source_key));
       prev_wma_source  : constant Long_Float :=
-        (if should_roll
-         then prev_prev (wma_source_key)
+        (if should_roll then prev_prev (wma_source_key)
          else prev (wma_source_key));
       buy_signal       : constant Boolean :=
         curr (entry_key) > curr_wma_source;
@@ -173,8 +172,7 @@ package body Kernel is
       results   : in out Kernel_Elements)
    is
       bid_exit_price : constant Long_Float :=
-        (if conf.Is_Quasi
-         then curr (Common.Bid_Open)
+        (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
 
       res      : Kernel_Element := results (index);
