@@ -112,9 +112,14 @@ package body Kernel_Ops is
          result.total_found := result.total_found + 1;
       end if;
 
-      --  if the best scenario report is less than or equal to zero
-      --  and the current scenario report is greater than the best
-      --  then update the best scenario report
+      --  if the best final total is less than or equal to zero
+      --  and the current final total is greater than the best
+      --  then update the best scenario report despite the final total
+      --  being less than or equal to zero
+      --  this is to ensure we capture the best scenario report
+      --  even if it has a final total of zero or less
+      --  this is useful for debugging and understanding the scenarios
+      --  that lead to a zero or negative final total
       if result.best_scenario_report.Final_Total <= 0.0
         and then sr.Final_Total > result.best_scenario_report.Final_Total
       then
