@@ -171,14 +171,14 @@ package body Kernel_Ops is
                loop
                   for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
                      Process_Kernel_Operation
-                       (p,
-                        result,
-                        chart,
-                        entry_key,
-                        exit_key,
-                        wma_source_key,
-                        take_profit_multiplier,
-                        stop_loss_multiplier);
+                       (p => p,
+                        result => result,
+                        chart => chart,
+                        entry_key => entry_key,
+                        exit_key => exit_key,
+                        wma_source_key => wma_source_key,
+                        take_profit_multiplier => take_profit_multiplier,
+                        stop_loss_multiplier => stop_loss_multiplier);
                   end loop;
                end loop;
             end loop;
@@ -190,11 +190,9 @@ package body Kernel_Ops is
    end Find_Max;
 
    function Find_Max_TP_SL
-     (p              : Common.Row_Pool;
-      chart          : Config.Chart_Config;
-      entry_key      : Common.Pool_Key;
-      exit_key       : Common.Pool_Key;
-      wma_source_key : Common.WMA_Source_Key) return Operation_Result
+     (p     : Common.Row_Pool;
+      chart : Config.Chart_Config;
+      conf  : Kernel.Scenario_Config) return Operation_Result
    is
       temp_total_found : Natural := 0;
       result           : Operation_Result;
@@ -205,14 +203,14 @@ package body Kernel_Ops is
       for take_profit_multiplier of Common.Take_Profit_Multipliers loop
          for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
             Process_Kernel_Operation
-              (p,
-               result,
-               chart,
-               entry_key,
-               exit_key,
-               wma_source_key,
-               take_profit_multiplier,
-               stop_loss_multiplier);
+              (p => p,
+               result => result,
+               chart => chart,
+               entry_key => conf.Entry_Key,
+               exit_key => conf.Exit_Key,
+               wma_source_key => conf.WMA_Source_Key,
+               take_profit_multiplier => take_profit_multiplier,
+               stop_loss_multiplier => stop_loss_multiplier);
          end loop;
       end loop;
 

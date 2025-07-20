@@ -73,31 +73,25 @@ procedure Mutantsolver is
    start_time          : Ada.Real_Time.Time;
    end_time            : Ada.Real_Time.Time;
    total_time_duration : Ada.Real_Time.Time_Span;
+   throughput          : Float := 0.0;
 
    --  scenario reporting variables
-   temp_total_found : Natural := 0;
-   offline_results  : Kernel.Kernel_Elements (1 .. chart.Offline_Set_Size);
-   online_results   : Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
-   throughput       : Float := 0.0;
-   find_max_result  : Kernel_Ops.Operation_Result;
+   offline_results           :
+     Kernel.Kernel_Elements (1 .. chart.Offline_Set_Size);
+   zk_online_results         :
+     Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
+   refined_zk_online_results :
+     Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
+   find_max_result           : Kernel_Ops.Operation_Result;
+   find_tpsl_result          : Kernel_Ops.Operation_Result;
 
    pragma Assert (offline_results'Length = chart.Offline_Set_Size);
    pragma Assert (offline_data_pool'Length = chart.Offline_Set_Size);
    pragma Assert (online_data_pool'Length = chart.Online_Set_Size);
    pragma
      Assert (tp_sl_offline_data_pool'Length = chart.TP_SL_Offline_Set_Size);
-   pragma Assert (online_results'Length = chart.Online_Set_Size);
-
-   procedure Launch_And_Profile_Find_Max is
-   begin
-      start_time := Ada.Real_Time.Clock;
-
-      find_max_result :=
-        Kernel_Ops.Find_Max (p => offline_data_pool, chart => chart);
-
-      end_time := Ada.Real_Time.Clock;
-      total_time_duration := Ada.Real_Time."-" (end_time, start_time);
-   end Launch_And_Profile_Find_Max;
+   pragma Assert (zk_online_results'Length = chart.Online_Set_Size);
+   pragma Assert (refined_zk_online_results'Length = chart.Online_Set_Size);
 
    procedure Print_Most_Recent_Candle is
    begin
@@ -109,54 +103,83 @@ procedure Mutantsolver is
       end loop;
    end Print_Most_Recent_Candle;
 
-   procedure Recover_Results
-     (p       : Common.Row_Pool;
-      results : out Kernel.Kernel_Elements;
-      count   : Positive) is
+   function Recover_Results
+     (p : Common.Row_Pool; conf : Kernel.Scenario_Config; count : Positive)
+      return Kernel.Kernel_Elements
+   is
+      results : Kernel.Kernel_Elements (1 .. count);
    begin
       for i in chart.Time_Period_Interval .. count loop
          Kernel.Kernel
            (curr      => p (i),
             prev      => p (i - 1),
             prev_prev => p (i - 2),
-            conf      => find_max_result.best_scenario_report.Config,
+            conf      => conf,
             index     => i,
             results   => results);
       end loop;
+
+      return results;
    end Recover_Results;
 
    procedure Summarize_Results is
    begin
       io.Put_Line (find_max_result.best_scenario_report'Image);
       io.Put_Line
-        ("zk: " & online_results (chart.Online_Set_Size).Exit_Total'Image);
+        ("et total:"
+         & offline_results (chart.Offline_Set_Size).Exit_Total'Image);
       io.Put_Line
-        ("found: "
+        ("zk total:"
+         & zk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+      io.Put_Line
+        ("refined zk total:"
+         & refined_zk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+      io.Put_Line
+        ("found offline:"
          & find_max_result.total_found'Image
-         & "/"
+         & " /"
          & find_max_result.total_count'Image);
-      io.Put_Line ("time: " & total_time_duration'Image & "s");
+      io.Put_Line ("time:" & total_time_duration'Image & "s");
       throughput :=
         Float (find_max_result.total_count)
         / Float (Ada.Real_Time.To_Duration (total_time_duration));
-      io.Put_Line ("throughput : " & throughput'Image);
+      io.Put_Line ("throughput:" & throughput'Image);
    end Summarize_Results;
 
 begin
+   start_time := Ada.Real_Time.Clock;
 
-   Launch_And_Profile_Find_Max;
+   find_max_result :=
+     Kernel_Ops.Find_Max (p => offline_data_pool, chart => chart);
+
+   find_tpsl_result :=
+     Kernel_Ops.Find_Max_TP_SL
+       (p     => tp_sl_offline_data_pool,
+        chart => chart,
+        conf  => find_max_result.best_scenario_report.Config);
 
    Print_Most_Recent_Candle;
 
-   Recover_Results
-     (p       => offline_data_pool,
-      results => offline_results,
-      count   => chart.Offline_Set_Size);
+   offline_results :=
+     Recover_Results
+       (p     => offline_data_pool,
+        conf  => find_max_result.best_scenario_report.Config,
+        count => chart.Offline_Set_Size);
 
-   Recover_Results
-     (p       => online_data_pool,
-      results => online_results,
-      count   => chart.Online_Set_Size);
+   zk_online_results :=
+     Recover_Results
+       (p     => online_data_pool,
+        conf  => find_max_result.best_scenario_report.Config,
+        count => chart.Online_Set_Size);
+
+   refined_zk_online_results :=
+     Recover_Results
+       (p     => online_data_pool,
+        conf  => find_tpsl_result.best_scenario_report.Config,
+        count => chart.Online_Set_Size);
+
+   end_time := Ada.Real_Time.Clock;
+   total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
    Summarize_Results;
 
