@@ -177,6 +177,7 @@ package body Kernel is
 
       res      : Kernel_Element := results (index);
       last_res : Kernel_Element := results (index - 1);
+      is_dynamic : Boolean := True;
 
    begin
       --  calculate the wma signal
@@ -231,13 +232,31 @@ package body Kernel is
          res.Exit_Price := bid_exit_price;
       end if;
 
-      --  carry over the prices to continue current open position and or
-      --  get ready to exit
-      res.Carry_Over_Prices (last_res);
+      --  ensure that the state machine is valid
       pragma
         Assert
-          (not ((res.Trigger = -1 and then res.Signal = 0)
+          (last_res.Signal = 1 and then ((res.Trigger = -1 and then res.Signal = 0)
                 or else (res.Trigger = 0 and then res.Signal = 1)));
+
+      if not is_dynamic then
+         --  carry over the prices to continue current open position and or
+         --  get ready to exit
+         res.Carry_Over_Prices (last_res);
+      else
+         --  if dynamic then re-pin the tpsl prices
+         res.Pin_Entry_TPSL_Prices
+           (ask_close              => curr (Common.Ask_Close),
+            bid_close              => curr (Common.Bid_Close),
+            atr                    => curr (Common.ATR),
+            take_profit_multiplier => conf.Take_Profit_Multiplier,
+            stop_loss_multiplier   => conf.Stop_Loss_Multiplier,
+            num_digits             => conf.Num_Digits);
+
+         --  carry over the entry price from the last result
+         res.Entry_Price := last_res.Entry_Price;
+      end if;
+
+      --  assert that the entry price is not zero
       pragma Assert (res.Entry_Price /= 0.0);
 
       --  execute sl or tp if triggered
@@ -245,12 +264,10 @@ package body Kernel is
         and then res.Stop_Loss_Price > curr (Common.Bid_Low)
       then
          res.Trigger_Stop_Loss;
-         pragma Assert (last_res.Signal = 1);
       elsif conf.Take_Profit_Multiplier /= 0.0
         and then res.Take_Profit_Price < curr (Common.Bid_High)
       then
          res.Trigger_Take_Profit;
-         pragma Assert (last_res.Signal = 1);
       end if;
 
       --  update the exit totals and or positions
