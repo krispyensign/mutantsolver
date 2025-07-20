@@ -24,6 +24,30 @@ package Kernel is
       Max_Exit_Total : Long_Float := Long_Float'First;
    end record;
 
+   type Kernel_Elements is array (Positive range <>) of Kernel_Element;
+
+   type Scenario_Config is tagged record
+      Start_Index            : Positive;
+      Is_Quasi               : Boolean := False;
+      Should_Roll            : Boolean := False;
+      Num_Digits             : Positive := 5;
+      Take_Profit_Multiplier : Float := 0.0;
+      Stop_Loss_Multiplier   : Float := 0.0;
+      Entry_Key              : Common.Candle_Key := Common.Bid_Open;
+      Exit_Key               : Common.Candle_Key := Common.Bid_Open;
+      WMA_Source_Key         : Common.WMA_Source_Key := Common.WMA_Bid_Open;
+   end record;
+
+   procedure Kernel
+     (curr      : Common.Keyed_Lane;
+      prev      : Common.Keyed_Lane;
+      prev_prev : Common.Keyed_Lane;
+      conf      : Scenario_Config;
+      index     : Positive;
+      results   : in out Kernel_Elements);
+
+private
+
    procedure Reset
      (res : in out Kernel_Element'Class; reference_res : Kernel_Element'Class);
 
@@ -53,38 +77,5 @@ package Kernel is
       bid_exit_price : Long_Float;
       ask_close      : Long_Float);
 
-   type Kernel_Elements is array (Positive range <>) of Kernel_Element;
-
-   type Scenario_Config is tagged record
-      Start_Index            : Positive;
-      Is_Quasi               : Boolean := False;
-      Should_Roll            : Boolean := False;
-      Num_Digits             : Positive := 5;
-      Take_Profit_Multiplier : Float := 0.0;
-      Stop_Loss_Multiplier   : Float := 0.0;
-      Entry_Key              : Common.Candle_Key := Common.Bid_Open;
-      Exit_Key               : Common.Candle_Key := Common.Bid_Open;
-      WMA_Source_Key         : Common.WMA_Source_Key := Common.WMA_Bid_Open;
-   end record;
-
-   type Scenario_Report is record
-      Config         : Scenario_Config;
-      Wins           : Natural := 0;
-      Losses         : Natural := 0;
-      Take_Profits   : Natural := 0;
-      Stop_Losses    : Natural := 0;
-      Max_Exit_Total : Long_Float := Long_Float'First;
-      Min_Exit_Total : Long_Float := Long_Float'Last;
-      Ratio          : Float := 0.0;
-      Final_Total    : Long_Float := Long_Float'First;
-   end record;
-
-   procedure Kernel
-     (curr      : Common.Keyed_Lane;
-      prev      : Common.Keyed_Lane;
-      prev_prev : Common.Keyed_Lane;
-      conf      : Scenario_Config;
-      index     : Positive;
-      results   : in out Kernel_Elements);
 
 end Kernel;

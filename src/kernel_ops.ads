@@ -5,9 +5,21 @@ with Kernel;
 with Config;
 
 package Kernel_Ops is
+   type Scenario_Report is record
+      Config         : Kernel.Scenario_Config;
+      Wins           : Natural := 0;
+      Losses         : Natural := 0;
+      Take_Profits   : Natural := 0;
+      Stop_Losses    : Natural := 0;
+      Max_Exit_Total : Long_Float := Long_Float'First;
+      Min_Exit_Total : Long_Float := Long_Float'Last;
+      Ratio          : Float := 0.0;
+      Final_Total    : Long_Float := Long_Float'First;
+   end record;
+
    type Operation_Result is record
-      best_scenario_report : Kernel.Scenario_Report;
-      last_scenario_report : Kernel.Scenario_Report;
+      best_scenario_report : Scenario_Report;
+      last_scenario_report : Scenario_Report;
       total_count          : Natural := 0;
       total_reported       : Natural := 0;
       total_found          : Natural := 0;

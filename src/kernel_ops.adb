@@ -44,7 +44,7 @@ package body Kernel_Ops is
       is_quasi     : Boolean := False;
       should_roll  : Boolean := False;
       conf         : Kernel.Scenario_Config;
-      sr           : Kernel.Scenario_Report;
+      sr           : Scenario_Report;
    begin
       --  prevent sl > tp
       --  TODO make this toggle
