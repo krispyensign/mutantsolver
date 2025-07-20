@@ -104,42 +104,32 @@ procedure Mutantsolver is
       for k in Common.Pool_Key'Range loop
          io.Put_Line
            (k'Image
-            & " => "
+            & " =>"
             & online_data_pool (chart.Online_Set_Size - 1) (k)'Image);
       end loop;
    end Print_Most_Recent_Candle;
 
-   procedure Recover_Offline_Results is
+   procedure Recover_Results
+     (p       : Common.Row_Pool;
+      results : out Kernel.Kernel_Elements;
+      count   : Positive) is
    begin
-      for i in chart.Time_Period_Interval .. chart.Offline_Set_Size loop
+      for i in chart.Time_Period_Interval .. count loop
          Kernel.Kernel
-           (curr      => offline_data_pool (i),
-            prev      => offline_data_pool (i - 1),
-            prev_prev => offline_data_pool (i - 2),
+           (curr      => p (i),
+            prev      => p (i - 1),
+            prev_prev => p (i - 2),
             conf      => find_max_result.best_scenario_report.Config,
             index     => i,
-            results   => offline_results);
+            results   => results);
       end loop;
-   end Recover_Offline_Results;
-
-   procedure Recover_Online_Results is
-   begin
-      for i in chart.Time_Period_Interval .. chart.Online_Set_Size loop
-         Kernel.Kernel
-           (curr      => online_data_pool (i),
-            prev      => online_data_pool (i - 1),
-            prev_prev => online_data_pool (i - 2),
-            conf      => find_max_result.best_scenario_report.Config,
-            index     => i,
-            results   => online_results);
-      end loop;
-   end Recover_Online_Results;
+   end Recover_Results;
 
    procedure Summarize_Results is
    begin
       io.Put_Line (find_max_result.best_scenario_report'Image);
       io.Put_Line
-        ("zk : " & online_results (chart.Online_Set_Size).Exit_Total'Image);
+        ("zk: " & online_results (chart.Online_Set_Size).Exit_Total'Image);
       io.Put_Line
         ("found: "
          & find_max_result.total_found'Image
@@ -158,9 +148,15 @@ begin
 
    Print_Most_Recent_Candle;
 
-   Recover_Offline_Results;
+   Recover_Results
+     (p       => offline_data_pool,
+      results => offline_results,
+      count   => chart.Offline_Set_Size);
 
-   Recover_Online_Results;
+   Recover_Results
+     (p       => online_data_pool,
+      results => online_results,
+      count   => chart.Online_Set_Size);
 
    Summarize_Results;
 
