@@ -136,9 +136,9 @@ package body Kernel_Ops is
         (if sr.Wins + sr.Losses > 0
          then Float (sr.Wins) / Float (sr.Wins + sr.Losses)
          else 0.0);
-      
-      --  if the ratio is greater than the best scenario report ratio
-      --  and the final total is greater than the best scenario report final total
+
+      --  if the ratio is greater than the best ratio
+      --  and the final total is greater than the best final total
       --  then update the best scenario report
       if ratio > result.best_scenario_report.Ratio
         and then sr.Final_Total > result.best_scenario_report.Final_Total
@@ -183,4 +183,36 @@ package body Kernel_Ops is
       return result;
 
    end Find_Max;
+
+   function Find_Max_TP_SL
+     (p              : Common.Row_Pool;
+      chart          : Config.Chart_Config;
+      entry_key      : Common.Pool_Key;
+      exit_key       : Common.Pool_Key;
+      wma_source_key : Common.WMA_Source_Key) return Operation_Result
+   is
+      temp_total_found : Natural := 0;
+      result           : Operation_Result;
+
+   begin
+      --  queue the configs to the solver tasks
+      result.total_found := 0;
+      for take_profit_multiplier of Common.Take_Profit_Multipliers loop
+         for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
+            Process_Kernel_Operation
+              (p,
+               result,
+               chart,
+               entry_key,
+               exit_key,
+               wma_source_key,
+               take_profit_multiplier,
+               stop_loss_multiplier);
+         end loop;
+      end loop;
+
+      return result;
+
+   end Find_Max_TP_SL;
+
 end Kernel_Ops;

@@ -29,4 +29,11 @@ package Kernel_Ops is
      (p : Common.Row_Pool; chart : Config.Chart_Config)
       return Operation_Result;
 
+   function Find_Max_TP_SL
+     (p              : Common.Row_Pool;
+      chart          : Config.Chart_Config;
+      entry_key      : Common.Pool_Key;
+      exit_key       : Common.Pool_Key;
+      wma_source_key : Common.WMA_Source_Key) return Operation_Result;
+
 end Kernel_Ops;
