@@ -4,13 +4,13 @@ with Config;
 with TOML;
 with TOML.File_IO;
 with Oanda_Exchange;
-with TA;
 with Core;
 with Pools;
 with Common; use Common;
 with Ada.Text_IO;
 with Ada.Real_Time;
 with Kernel;
+with Kernel_Ops;
 
 procedure Mutantsolver is
    package io renames Ada.Text_IO;
@@ -22,8 +22,6 @@ procedure Mutantsolver is
    count  : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
 
-   --  initialize the Technical analysis library TA-Lib
-   ta_result  : constant Integer := TA.TA_Initialize;
    --  fetch the candles
    ex_candles : constant Core.Candles (1 .. count) :=
      Oanda_Exchange.Fetch_Candles (oanda, chart);
@@ -41,9 +39,9 @@ procedure Mutantsolver is
    package offline_p is new Pools (Count => chart.Offline_Set_Size);
    offline_data_pool : constant Common.Row_Pool :=
      offline_p.Make_Row_Pool
-       ([for i in Common.Pool_Key'Range =>
-           offline_p.Swim_Lane
-             (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
+       ([for i in Common.Pool_Key'Range
+         => offline_p.Swim_Lane
+              (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
 
    --  tp_sl_offline_data_pool is a pool that contains a copied slice of the
    --  offline candles that will be used for solving for optimized take profit
@@ -54,13 +52,11 @@ procedure Mutantsolver is
      Pools (Count => chart.TP_SL_Offline_Set_Size);
    tp_sl_offline_data_pool : constant Common.Row_Pool :=
      tp_sl_offline_p.Make_Row_Pool
-       ([for key in Common.Pool_Key'Range =>
-           tp_sl_offline_p.Swim_Lane
-             (full_data_pool (key)
-                (chart.Offline_Set_Size
-                 - chart.TP_SL_Offline_Set_Size
-                 + 1
-                 .. chart.Offline_Set_Size))]);
+       ([for key in Common.Pool_Key'Range
+         => tp_sl_offline_p.Swim_Lane
+              (full_data_pool (key)
+                 (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
+                  .. chart.Offline_Set_Size))]);
 
    --  online_data_pool is a pool that contains the online candles that
    --  will not be solved for and are only used for zero knowledge evaluation
@@ -69,159 +65,122 @@ procedure Mutantsolver is
    package online_p is new Pools (Count => chart.Online_Set_Size);
    online_data_pool : constant Common.Row_Pool :=
      online_p.Make_Row_Pool
-       ([for i in Common.Pool_Key'Range =>
-           online_p.Swim_Lane
-             (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
+       ([for i in Common.Pool_Key'Range
+         => online_p.Swim_Lane
+              (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
 
    --  performance metrics
    start_time          : Ada.Real_Time.Time;
    end_time            : Ada.Real_Time.Time;
    total_time_duration : Ada.Real_Time.Time_Span;
-
-   --  multithreading
-   num_tasks    : constant Positive := 1;
-   kernel_tasks :
-     array (Positive range 1 .. num_tasks) of Kernel.Process_Kernel;
+   throughput          : Float := 0.0;
 
    --  scenario reporting variables
-   best_scenario_report : Kernel.Scenario_Report;
-   one_true_count       : Natural := 0;
-   total_found          : Natural := 0;
-   temp_total_found     : Natural := 0;
-   offline_results      : Kernel.Scenario_Result (1 .. chart.Offline_Set_Size);
-   online_results       : Kernel.Scenario_Result (1 .. chart.Online_Set_Size);
-   is_quasi             : Boolean := False;
-   should_roll          : Boolean := False;
+   offline_results           :
+     Kernel.Kernel_Elements (1 .. chart.Offline_Set_Size);
+   zk_online_results         :
+     Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
+   refined_zk_online_results :
+     Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
+   find_max_result           : Kernel_Ops.Operation_Result;
+   find_tpsl_result          : Kernel_Ops.Operation_Result;
 
    pragma Assert (offline_results'Length = chart.Offline_Set_Size);
    pragma Assert (offline_data_pool'Length = chart.Offline_Set_Size);
    pragma Assert (online_data_pool'Length = chart.Online_Set_Size);
    pragma
      Assert (tp_sl_offline_data_pool'Length = chart.TP_SL_Offline_Set_Size);
-   pragma Assert (online_results'Length = chart.Online_Set_Size);
+   pragma Assert (zk_online_results'Length = chart.Online_Set_Size);
+   pragma Assert (refined_zk_online_results'Length = chart.Online_Set_Size);
 
-   function Is_In_Quasi_Keys (exit_key : Common.Candle_Key) return Boolean is
+   procedure Print_Most_Recent_Candle is
    begin
-      case exit_key is
-         when Quasi_Keys =>
-            return True;
+      for k in Common.Pool_Key'Range loop
+         io.Put_Line
+           (k'Image
+            & " =>"
+            & online_data_pool (chart.Online_Set_Size - 1) (k)'Image);
+      end loop;
+   end Print_Most_Recent_Candle;
 
-         when others =>
-            return False;
-      end case;
-   end Is_In_Quasi_Keys;
-
-   function Is_Not_In_WMA_Quasi_Keys
-     (wma_source_key : Common.WMA_Source_Key) return Boolean is
+   function Recover_Results
+     (p : Common.Row_Pool; conf : Kernel.Scenario_Config; count : Positive)
+      return Kernel.Kernel_Elements
+   is
+      results : Kernel.Kernel_Elements (1 .. count);
    begin
-      case wma_source_key is
-         when WMA_Quasi_Keys =>
-            return False;
+      for i in chart.Time_Period_Interval .. count loop
+         Kernel.Kernel
+           (curr      => p (i),
+            prev      => p (i - 1),
+            prev_prev => p (i - 2),
+            conf      => conf,
+            index     => i,
+            results   => results);
+      end loop;
 
-         when others =>
-            return True;
-      end case;
-   end Is_Not_In_WMA_Quasi_Keys;
+      return results;
+   end Recover_Results;
+
+   procedure Summarize_Results is
+   begin
+      io.Put_Line (find_max_result.best_scenario_report'Image);
+      io.Put_Line
+        ("et total:"
+         & offline_results (chart.Offline_Set_Size).Exit_Total'Image);
+      io.Put_Line
+        ("zk total:"
+         & zk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+      io.Put_Line
+        ("refined zk total:"
+         & refined_zk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+      io.Put_Line
+        ("found offline:"
+         & find_max_result.total_found'Image
+         & " /"
+         & find_max_result.total_count'Image);
+      io.Put_Line ("time:" & total_time_duration'Image & "s");
+      throughput :=
+        Float (find_max_result.total_count)
+        / Float (Ada.Real_Time.To_Duration (total_time_duration));
+      io.Put_Line ("throughput:" & throughput'Image);
+   end Summarize_Results;
 
 begin
-
-   for k in Common.Pool_Key'Range loop
-      io.Put_Line
-        (k'Image
-         & " => "
-         & online_data_pool (chart.Online_Set_Size - 1) (k)'Image);
-   end loop;
-
-   io.Put_Line (offline_data_pool (1)'Length'Image);
-   io.Put_Line (offline_data_pool'Length'Image);
    start_time := Ada.Real_Time.Clock;
 
-   --  queue the configs to the solver tasks
-   for wma_source_key in Common.WMA_Source_Key'Range loop
-      for entry_key in Common.Candle_Key'Range loop
-         for exit_key in Common.Candle_Key'Range loop
-            for take_profit_multiplier of Common.Take_Profit_Multipliers loop
-               for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
-                  --  prevent sl > tp
-                  if stop_loss_multiplier > take_profit_multiplier then
-                     goto Continue;
-                  end if;
+   find_max_result :=
+     Kernel_Ops.Find_Max (p => offline_data_pool, chart => chart);
 
-                  --  log progress
-                  one_true_count := one_true_count + 1;
-                  if one_true_count mod 100000 = 0 then
-                     io.Put_Line (one_true_count'Image);
-                  end if;
+   find_tpsl_result :=
+     Kernel_Ops.Find_Max_TP_SL
+       (p     => tp_sl_offline_data_pool,
+        chart => chart,
+        conf  => find_max_result.best_scenario_report.Config);
 
-                  --  determine quasi and if we should roll
-                  is_quasi := Is_In_Quasi_Keys (exit_key);
-                  if is_quasi then
-                     should_roll := Is_Not_In_WMA_Quasi_Keys (wma_source_key);
-                  end if;
+   Print_Most_Recent_Candle;
 
-                  --  start the task
-                  kernel_tasks (1 + (one_true_count mod num_tasks)).Start
-                    (p    => offline_data_pool,
-                     conf =>
-                       (Start_Index            => chart.Time_Period_Interval,
-                        Entry_Key              => entry_key,
-                        Exit_Key               => exit_key,
-                        WMA_Source_Key         => wma_source_key,
-                        Take_Profit_Multiplier => take_profit_multiplier,
-                        Stop_Loss_Multiplier   => stop_loss_multiplier,
-                        Num_Digits             => chart.Num_Digits,
-                        Is_Quasi               => is_quasi,
-                        Should_Roll            => should_roll));
-               end loop;
-               <<Continue>>
-            end loop;
-         end loop;
-      end loop;
-   end loop;
+   offline_results :=
+     Recover_Results
+       (p     => offline_data_pool,
+        conf  => find_max_result.best_scenario_report.Config,
+        count => chart.Offline_Set_Size);
 
-   --  gather the reports and pick only the best
-   if kernel_tasks'Length > 1 then
-      for i in 2 .. kernel_tasks'Length loop
-         declare
-            temp_report : Kernel.Scenario_Report;
-         begin
-            kernel_tasks (i).Read (temp_report, temp_total_found);
-            kernel_tasks (1).Update_Scenario (temp_report);
-            total_found := total_found + temp_total_found;
-         end;
-      end loop;
-   end if;
+   zk_online_results :=
+     Recover_Results
+       (p     => online_data_pool,
+        conf  => find_max_result.best_scenario_report.Config,
+        count => chart.Online_Set_Size);
+
+   refined_zk_online_results :=
+     Recover_Results
+       (p     => online_data_pool,
+        conf  => find_tpsl_result.best_scenario_report.Config,
+        count => chart.Online_Set_Size);
+
    end_time := Ada.Real_Time.Clock;
    total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
-   kernel_tasks (1).Read (best_scenario_report, temp_total_found);
-   total_found := temp_total_found;
+   Summarize_Results;
 
-   for i in chart.Time_Period_Interval .. chart.Offline_Set_Size loop
-      Kernel.Kernel
-        (curr      => offline_data_pool (i),
-         prev      => offline_data_pool (i - 1),
-         prev_prev => offline_data_pool (i - 2),
-         conf      => best_scenario_report.Config,
-         index     => i,
-         results   => offline_results);
-      if offline_results (i).Trigger /= 0 then
-         io.Put_Line (offline_results (i)'Image);
-      end if;
-   end loop;
-
-   for i in chart.Time_Period_Interval .. chart.Online_Set_Size loop
-      Kernel.Kernel
-        (curr      => online_data_pool (i),
-         prev      => online_data_pool (i - 1),
-         prev_prev => online_data_pool (i - 2),
-         conf      => best_scenario_report.Config,
-         index     => i,
-         results   => online_results);
-   end loop;
-
-   io.Put_Line (best_scenario_report'Image);
-   io.Put_Line ("zk : " & online_results (chart.Online_Set_Size).Exit_Total'Image);
-   io.Put_Line ("found: " & total_found'Image & "/" & one_true_count'Image);
-   io.Put_Line ("time: " & total_time_duration'Image & "s");
 end Mutantsolver;

@@ -5,9 +5,6 @@ with System;
 with Common;
 
 package TA is
-   function TA_Initialize return Integer
-   with Import => True, Convention => C, External_Name => "TA_Initialize";
-
    function Calc_TA_ATR
      (in_high     : Common.Real_Array;
       in_low      : Common.Real_Array;
@@ -26,6 +23,11 @@ package TA is
    with Pre => time_period < in_real'Length and then time_period > 0;
 
 private
+   is_initialized : Boolean := False;
+
+   function TA_Initialize return Integer
+   with Import => True, Convention => C, External_Name => "TA_Initialize";
+
    function TA_ATR
      (startIdx        : Interfaces.C.int;
       endIdx          : Interfaces.C.int;

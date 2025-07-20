@@ -4,7 +4,7 @@ with Common;
 
 package Kernel is
 
-   type Scenario_Result_Element is tagged record
+   type Kernel_Element is tagged record
       Signal            : Core.Signal_T := 0;
       Trigger           : Core.Trigger_T := 0;
       Entry_Price       : Long_Float := 0.0;
@@ -24,6 +24,8 @@ package Kernel is
       Max_Exit_Total : Long_Float := Long_Float'First;
    end record;
 
+   type Kernel_Elements is array (Positive range <>) of Kernel_Element;
+
    type Scenario_Config is tagged record
       Start_Index            : Positive;
       Is_Quasi               : Boolean := False;
@@ -36,41 +38,58 @@ package Kernel is
       WMA_Source_Key         : Common.WMA_Source_Key := Common.WMA_Bid_Open;
    end record;
 
-   type Scenario_Report is record
-      Config         : Scenario_Config;
-      Wins           : Natural := 0;
-      Losses         : Natural := 0;
-      Take_Profits   : Natural := 0;
-      Stop_Losses    : Natural := 0;
-      Max_Exit_Total : Long_Float := Long_Float'First;
-      Min_Exit_Total : Long_Float := Long_Float'Last;
-      Ratio          : Float := 0.0;
-      Final_Total    : Long_Float := Long_Float'First;
-   end record;
-
-   type Scenario_Result is
-     array (Positive range <>) of Scenario_Result_Element;
-
-   procedure Reset
-     (res           : in out Scenario_Result_Element'Class;
-      reference_res : Scenario_Result_Element'Class);
-
-   procedure Set_Prices
-     (res      : in out Scenario_Result_Element'Class;
-      last_res : Scenario_Result_Element'Class);
-
    procedure Kernel
-     (curr    : Common.Keyed_Lane;
-      prev    : Common.Keyed_Lane;
+     (curr      : Common.Keyed_Lane;
+      prev      : Common.Keyed_Lane;
       prev_prev : Common.Keyed_Lane;
-      conf    : Scenario_Config;
-      index   : Positive;
-      results : in out Scenario_Result);
+      conf      : Scenario_Config;
+      index     : Positive;
+      results   : in out Kernel_Elements);
 
-   task type Process_Kernel is
-      entry Start (p : Common.Row_Pool; conf : Scenario_Config);
-      entry Update_Scenario (sr : Scenario_Report);
-      entry Read (sr : out Scenario_Report; tf : out Natural);
-   end Process_Kernel;
+private
+
+   --  reset the Kernel_Element to a reference state
+   procedure Reset
+     (res : in out Kernel_Element'Class; reference_res : Kernel_Element'Class);
+
+   --  pin the prices to the current candle
+   procedure Pin_Entry_TPSL_Prices
+     (res                    : in out Kernel_Element'Class;
+      ask_close              : Long_Float;
+      bid_close              : Long_Float;
+      atr                    : Long_Float;
+      take_profit_multiplier : Float;
+      stop_loss_multiplier   : Float;
+      num_digits             : Positive);
+
+   --  carry over prices from the last Kernel_Element
+   procedure Carry_Over_Prices
+     (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
+
+   --  carry over totals from the last Kernel_Element
+   procedure Carry_Over_Totals
+     (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
+
+   --  execute the stop loss strategy
+   procedure Trigger_Stop_Loss (res : in out Kernel_Element'Class);
+
+   --  execute the take profit strategy
+   procedure Trigger_Take_Profit (res : in out Kernel_Element'Class);
+
+   --  update the min and max exit totals
+   procedure Update_Min_Max_Totals
+     (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
+
+   --  update the wins and losses
+   procedure Update_Wins_Losses (res : in out Kernel_Element'Class);
+
+   --  update the exit totals
+   procedure Update_Exit_Totals (res : in out Kernel_Element'Class);
+
+   --  update the position based on the exit price
+   procedure Update_Position
+     (res            : in out Kernel_Element'Class;
+      bid_exit_price : Long_Float;
+      ask_close      : Long_Float);
 
 end Kernel;
