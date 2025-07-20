@@ -66,24 +66,24 @@ package Common is
    subtype Quasi_Keys is Candle_Key
    with
      Static_Predicate =>
-       Quasi_Keys
-       in Ask_Open
-        | Bid_Open
-        | Mid_Open
-        | HA_Ask_Open
-        | HA_Bid_Open
-        | HA_Mid_Open;
+       Quasi_Keys in
+         Ask_Open
+         | Bid_Open
+         | Mid_Open
+         | HA_Ask_Open
+         | HA_Bid_Open
+         | HA_Mid_Open;
 
    subtype WMA_Quasi_Keys is WMA_Source_Key
    with
      Static_Predicate =>
-       WMA_Quasi_Keys
-       in WMA_Ask_Open
-        | WMA_Bid_Open
-        | WMA_Mid_Open
-        | WMA_HA_Ask_Open
-        | WMA_HA_Bid_Open
-        | WMA_HA_Mid_Open;
+       WMA_Quasi_Keys in
+         WMA_Ask_Open
+         | WMA_Bid_Open
+         | WMA_Mid_Open
+         | WMA_HA_Ask_Open
+         | WMA_HA_Bid_Open
+         | WMA_HA_Mid_Open;
 
    type Keyed_Lane is
      array (Common.Pool_Key range Common.Pool_Key'Range) of Long_Float;
