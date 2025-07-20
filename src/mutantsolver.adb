@@ -88,59 +88,80 @@ procedure Mutantsolver is
      Assert (tp_sl_offline_data_pool'Length = chart.TP_SL_Offline_Set_Size);
    pragma Assert (online_results'Length = chart.Online_Set_Size);
 
+   procedure Launch_And_Profile_Find_Max is
+   begin
+      start_time := Ada.Real_Time.Clock;
+
+      find_max_result :=
+        Kernel_Ops.Find_Max (p => offline_data_pool, chart => chart);
+
+      end_time := Ada.Real_Time.Clock;
+      total_time_duration := Ada.Real_Time."-" (end_time, start_time);
+   end Launch_And_Profile_Find_Max;
+
+   procedure Print_Most_Recent_Candle is
+   begin
+      for k in Common.Pool_Key'Range loop
+         io.Put_Line
+           (k'Image
+            & " => "
+            & online_data_pool (chart.Online_Set_Size - 1) (k)'Image);
+      end loop;
+   end Print_Most_Recent_Candle;
+
+   procedure Recover_Offline_Results is
+   begin
+      for i in chart.Time_Period_Interval .. chart.Offline_Set_Size loop
+         Kernel.Kernel
+           (curr      => offline_data_pool (i),
+            prev      => offline_data_pool (i - 1),
+            prev_prev => offline_data_pool (i - 2),
+            conf      => find_max_result.best_scenario_report.Config,
+            index     => i,
+            results   => offline_results);
+      end loop;
+   end Recover_Offline_Results;
+
+   procedure Recover_Online_Results is
+   begin
+      for i in chart.Time_Period_Interval .. chart.Online_Set_Size loop
+         Kernel.Kernel
+           (curr      => online_data_pool (i),
+            prev      => online_data_pool (i - 1),
+            prev_prev => online_data_pool (i - 2),
+            conf      => find_max_result.best_scenario_report.Config,
+            index     => i,
+            results   => online_results);
+      end loop;
+   end Recover_Online_Results;
+
+   procedure Summarize_Results is
+   begin
+      io.Put_Line (find_max_result.best_scenario_report'Image);
+      io.Put_Line
+        ("zk : " & online_results (chart.Online_Set_Size).Exit_Total'Image);
+      io.Put_Line
+        ("found: "
+         & find_max_result.total_found'Image
+         & "/"
+         & find_max_result.total_count'Image);
+      io.Put_Line ("time: " & total_time_duration'Image & "s");
+      throughput :=
+        Float (find_max_result.total_count)
+        / Float (Ada.Real_Time.To_Duration (total_time_duration));
+      io.Put_Line ("throughput : " & throughput'Image);
+   end Summarize_Results;
+
 begin
 
-   for k in Common.Pool_Key'Range loop
-      io.Put_Line
-        (k'Image
-         & " => "
-         & online_data_pool (chart.Online_Set_Size - 1) (k)'Image);
-   end loop;
+   Launch_And_Profile_Find_Max;
 
-   io.Put_Line (offline_data_pool (1)'Length'Image);
-   io.Put_Line (offline_data_pool'Length'Image);
-   start_time := Ada.Real_Time.Clock;
+   Print_Most_Recent_Candle;
 
-   find_max_result :=
-     Kernel_Ops.Find_Max (p => offline_data_pool, chart => chart);
+   Recover_Offline_Results;
 
-   end_time := Ada.Real_Time.Clock;
-   total_time_duration := Ada.Real_Time."-" (end_time, start_time);
+   Recover_Online_Results;
 
-   for i in chart.Time_Period_Interval .. chart.Offline_Set_Size loop
-      Kernel.Kernel
-        (curr      => offline_data_pool (i),
-         prev      => offline_data_pool (i - 1),
-         prev_prev => offline_data_pool (i - 2),
-         conf      => find_max_result.best_scenario_report.Config,
-         index     => i,
-         results   => offline_results);
-      --  if offline_results (i).Trigger /= 0 then
-      --     io.Put_Line (offline_results (i)'Image);
-      --  end if;
-   end loop;
+   Summarize_Results;
 
-   for i in chart.Time_Period_Interval .. chart.Online_Set_Size loop
-      Kernel.Kernel
-        (curr      => online_data_pool (i),
-         prev      => online_data_pool (i - 1),
-         prev_prev => online_data_pool (i - 2),
-         conf      => find_max_result.best_scenario_report.Config,
-         index     => i,
-         results   => online_results);
-   end loop;
-
-   io.Put_Line (find_max_result.best_scenario_report'Image);
-   io.Put_Line
-     ("zk : " & online_results (chart.Online_Set_Size).Exit_Total'Image);
-   io.Put_Line
-     ("found: "
-      & find_max_result.total_found'Image
-      & "/"
-      & find_max_result.total_count'Image);
-   io.Put_Line ("time: " & total_time_duration'Image & "s");
-   throughput :=
-     Float (find_max_result.total_count)
-     / Float (Ada.Real_Time.To_Duration (total_time_duration));
-   io.Put_Line ("throughput : " & throughput'Image);
 end Mutantsolver;
