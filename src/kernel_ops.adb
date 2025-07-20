@@ -57,12 +57,14 @@ package body Kernel_Ops is
       if result.total_count mod 100000 = 0 then
          io.Put_Line (result.total_count'Image);
       end if;
+
       --  determine quasi and if we should roll
       is_quasi := Is_In_Quasi_Keys (exit_key);
       if is_quasi then
          should_roll := Is_Not_In_WMA_Quasi_Keys (wma_source_key);
       end if;
 
+      --  prepare the scenario config
       conf :=
         (Start_Index            => chart.Time_Period_Interval,
          Is_Quasi               => is_quasi,
@@ -73,7 +75,8 @@ package body Kernel_Ops is
          Entry_Key              => entry_key,
          Exit_Key               => exit_key,
          WMA_Source_Key         => wma_source_key);
-      --  run the solver
+
+      --  process the kernel operation
       for i in conf.Start_Index .. p'Length loop
          Kernel.Kernel
            (curr      => p (i),
@@ -84,7 +87,7 @@ package body Kernel_Ops is
             results   => cur_scen_res);
       end loop;
 
-      --  skip further processing if criteria is not met
+      --  get the last element and prepare the scenario report
       last_element := cur_scen_res (p'Length - 1);
       sr :=
         (Wins           => last_element.Wins,
@@ -99,14 +102,19 @@ package body Kernel_Ops is
       result.last_scenario_report := sr;
       result.total_reported := result.total_reported + 1;
 
+      --  if the final total is first then this is the first report
       if result.best_scenario_report.Final_Total = Long_Float'First then
          result.best_scenario_report := sr;
       end if;
 
+      --  if the final total is greater than zero then increment the found
       if sr.Final_Total > 0.0 then
          result.total_found := result.total_found + 1;
       end if;
 
+      --  if the best scenario report is less than or equal to zero
+      --  and the current scenario report is greater than the best
+      --  then update the best scenario report
       if result.best_scenario_report.Final_Total <= 0.0
         and then sr.Final_Total > result.best_scenario_report.Final_Total
       then
@@ -114,17 +122,24 @@ package body Kernel_Ops is
          io.Put_Line (result.best_scenario_report'Image);
       end if;
 
+      --  if the final total is less than or equal to zero then bail
+      --  or if the max exit total is less than or equal to the absolute value
+      --  of the min exit total then bail
       if sr.Final_Total <= 0.0
         or else sr.Max_Exit_Total <= abs (sr.Min_Exit_Total)
       then
          return;
       end if;
 
+      --  calculate the ratio
       ratio :=
         (if sr.Wins + sr.Losses > 0
          then Float (sr.Wins) / Float (sr.Wins + sr.Losses)
          else 0.0);
-
+      
+      --  if the ratio is greater than the best scenario report ratio
+      --  and the final total is greater than the best scenario report final total
+      --  then update the best scenario report
       if ratio > result.best_scenario_report.Ratio
         and then sr.Final_Total > result.best_scenario_report.Final_Total
       then
@@ -132,6 +147,7 @@ package body Kernel_Ops is
          result.best_scenario_report.Ratio := ratio;
          io.Put_Line (result.best_scenario_report'Image);
       end if;
+
    end Process_Kernel_Operation;
 
    function Find_Max
