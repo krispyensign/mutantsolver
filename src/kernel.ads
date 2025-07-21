@@ -53,14 +53,16 @@ private
      (res : in out Kernel_Element'Class; reference_res : Kernel_Element'Class);
 
    --  pin the prices to the current candle
-   procedure Pin_Entry_TPSL_Prices
+   procedure Pin_TPSL_Prices
      (res                    : in out Kernel_Element'Class;
+      last_res               : Kernel_Element'Class;
       ask_close              : Long_Float;
       bid_close              : Long_Float;
       atr                    : Long_Float;
       take_profit_multiplier : Float;
       stop_loss_multiplier   : Float;
-      num_digits             : Positive);
+      num_digits             : Positive;
+      is_dynamic             : Boolean);
 
    --  carry over prices from the last Kernel_Element
    procedure Carry_Over_Prices

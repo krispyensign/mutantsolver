@@ -82,8 +82,11 @@ procedure Mutantsolver is
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
    refined_zk_online_results :
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
+   pk_online_results         :
+     Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
    find_max_result           : Kernel_Ops.Operation_Result;
    find_tpsl_result          : Kernel_Ops.Operation_Result;
+   find_pk_online_max_result : Kernel_Ops.Operation_Result;
 
    pragma Assert (offline_results'Length = chart.Offline_Set_Size);
    pragma Assert (offline_data_pool'Length = chart.Offline_Set_Size);
@@ -92,6 +95,7 @@ procedure Mutantsolver is
      Assert (tp_sl_offline_data_pool'Length = chart.TP_SL_Offline_Set_Size);
    pragma Assert (zk_online_results'Length = chart.Online_Set_Size);
    pragma Assert (refined_zk_online_results'Length = chart.Online_Set_Size);
+   pragma Assert (pk_online_results'Length = chart.Online_Set_Size);
 
    procedure Print_Most_Recent_Candle is
    begin
@@ -135,6 +139,9 @@ procedure Mutantsolver is
         ("refined zk total:"
          & refined_zk_online_results (chart.Online_Set_Size).Exit_Total'Image);
       io.Put_Line
+        ("pk total:"
+         & pk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+      io.Put_Line
         ("found offline:"
          & find_max_result.total_found'Image
          & " /"
@@ -158,7 +165,11 @@ begin
         chart => chart,
         conf  => find_max_result.best_scenario_report.Config);
 
-   Print_Most_Recent_Candle;
+   find_pk_online_max_result :=
+     Kernel_Ops.Find_Max_TP_SL
+       (p     => online_data_pool,
+        chart => chart,
+        conf  => find_max_result.best_scenario_report.Config);
 
    offline_results :=
      Recover_Results
@@ -178,9 +189,16 @@ begin
         conf  => find_tpsl_result.best_scenario_report.Config,
         count => chart.Online_Set_Size);
 
+   pk_online_results :=
+     Recover_Results
+       (p     => online_data_pool,
+        conf  => find_pk_online_max_result.best_scenario_report.Config,
+        count => chart.Online_Set_Size);
+
    end_time := Ada.Real_Time.Clock;
    total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
+   Print_Most_Recent_Candle;
    Summarize_Results;
 
 end Mutantsolver;

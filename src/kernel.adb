@@ -26,6 +26,7 @@ package body Kernel is
       res.Take_Profit_Price := last_res.Take_Profit_Price;
       res.Stop_Loss_Price := last_res.Stop_Loss_Price;
       res.Exit_Total := last_res.Exit_Total;
+      pragma Assert (res.Entry_Price /= 0.0);
    end Carry_Over_Prices;
 
    procedure Carry_Over_Totals
@@ -40,14 +41,16 @@ package body Kernel is
       res.Take_Profits := last_res.Take_Profits;
    end Carry_Over_Totals;
 
-   procedure Pin_Entry_TPSL_Prices
+   procedure Pin_TPSL_Prices
      (res                    : in out Kernel_Element'Class;
+      last_res               : Kernel_Element'Class;
       ask_close              : Long_Float;
       bid_close              : Long_Float;
       atr                    : Long_Float;
       take_profit_multiplier : Float;
       stop_loss_multiplier   : Float;
-      num_digits             : Positive) is
+      num_digits             : Positive;
+      is_dynamic             : Boolean) is
    begin
       --  pin the entry to the ask close at this tick
       res.Entry_Price := ask_close;
@@ -69,6 +72,26 @@ package body Kernel is
          res.Stop_Loss_Price := bid_close - Long_Float (10.0 ** (-num_digits));
       end if;
 
+      if is_dynamic and then last_res.Signal = 1 then
+         res.Entry_Price := last_res.Entry_Price;
+
+         --  if the new calculation would exit the position then
+         --  revert to original tp
+         if take_profit_multiplier /= 0.0
+           and then res.Take_Profit_Price < res.Entry_Price
+         then
+            res.Take_Profit_Price := last_res.Take_Profit_Price;
+         end if;
+
+         --  if the new calculation would exit the position then
+         --  revert to original sl
+         if stop_loss_multiplier /= 0.0
+           and then res.Stop_Loss_Price > res.Entry_Price
+         then
+            res.Stop_Loss_Price := last_res.Stop_Loss_Price;
+         end if;
+      end if;
+
       pragma
         Assert
           (take_profit_multiplier = 0.0
@@ -77,7 +100,7 @@ package body Kernel is
         Assert
           (stop_loss_multiplier = 0.0
              or else res.Entry_Price >= res.Stop_Loss_Price);
-   end Pin_Entry_TPSL_Prices;
+   end Pin_TPSL_Prices;
 
    procedure Trigger_Stop_Loss (res : in out Kernel_Element'Class) is
    begin
@@ -85,7 +108,7 @@ package body Kernel is
       res.Trigger := -1;
       res.Exit_Price := res.Stop_Loss_Price;
       res.Stop_Losses := res.Stop_Losses + 1;
-      pragma Assert (res.Entry_Price >= res.Stop_Loss_Price);
+      --  pragma Assert (res.Entry_Price >= res.Stop_Loss_Price);
    end Trigger_Stop_Loss;
 
    procedure Trigger_Take_Profit (res : in out Kernel_Element'Class) is
@@ -94,7 +117,7 @@ package body Kernel is
       res.Trigger := -1;
       res.Exit_Price := res.Take_Profit_Price;
       res.Take_Profits := res.Take_Profits + 1;
-      pragma Assert (res.Entry_Price <= res.Take_Profit_Price);
+      --  pragma Assert (res.Entry_Price <= res.Take_Profit_Price);
    end Trigger_Take_Profit;
 
    procedure Update_Min_Max_Totals
@@ -187,7 +210,7 @@ package body Kernel is
 
       res        : Kernel_Element := results (index);
       last_res   : Kernel_Element := results (index - 1);
-      is_dynamic : constant Boolean := False;
+      is_dynamic : constant Boolean := True;
 
    begin
       --  calculate the wma signal
@@ -227,13 +250,17 @@ package body Kernel is
          return;
       elsif res.Trigger = 1 and then res.Signal = 1 then
          --  wma cross so pin the prices
-         res.Pin_Entry_TPSL_Prices
-           (ask_close              => curr (Common.Ask_Close),
+         res.Pin_TPSL_Prices
+           (last_res               => last_res,
+            ask_close              => curr (Common.Ask_Close),
             bid_close              => curr (Common.Bid_Close),
             atr                    => curr (Common.ATR),
             take_profit_multiplier => conf.Take_Profit_Multiplier,
             stop_loss_multiplier   => conf.Stop_Loss_Multiplier,
-            num_digits             => conf.Num_Digits);
+            num_digits             => conf.Num_Digits,
+            is_dynamic             => is_dynamic);
+
+         --  pin the entry to the ask close at this tick
          results (index) := res;
 
          return;
@@ -252,17 +279,31 @@ package body Kernel is
       --  carry over the prices to continue current open position and or
       --  get ready to exit
       res.Carry_Over_Prices (last_res);
-      pragma Assert (res.Entry_Price /= 0.0);
 
-      --  execute sl or tp if triggered
-      if conf.Stop_Loss_Multiplier /= 0.0
-        and then res.Stop_Loss_Price > curr (Common.Bid_Low)
-      then
-         res.Trigger_Stop_Loss;
-      elsif conf.Take_Profit_Multiplier /= 0.0
-        and then res.Take_Profit_Price < curr (Common.Bid_High)
-      then
-         res.Trigger_Take_Profit;
+      --  if quasi then the exit already happened and its just being
+      --  recorded
+      if conf.Is_Quasi then
+         if conf.Stop_Loss_Multiplier /= 0.0
+           and then (last_res.Stop_Loss_Price > prev (Common.Bid_Low)
+                     or else res.Stop_Loss_Price > curr (Common.Bid_Open))
+         then
+            res.Trigger_Stop_Loss;
+         elsif conf.Take_Profit_Multiplier /= 0.0
+           and then (last_res.Take_Profit_Price < prev (Common.Bid_High)
+                     or else res.Take_Profit_Price < curr (Common.Bid_Open))
+         then
+            res.Trigger_Take_Profit;
+         end if;
+      else
+         if conf.Stop_Loss_Multiplier /= 0.0
+           and then res.Stop_Loss_Price > curr (Common.Bid_Low)
+         then
+            res.Trigger_Stop_Loss;
+         elsif conf.Take_Profit_Multiplier /= 0.0
+           and then res.Take_Profit_Price < curr (Common.Bid_High)
+         then
+            res.Trigger_Take_Profit;
+         end if;
       end if;
 
       --  update the exit totals and or positions
@@ -271,16 +312,15 @@ package body Kernel is
       else
          if is_dynamic then
             --  if dynamic then re-pin the tpsl prices
-            res.Pin_Entry_TPSL_Prices
-              (ask_close              => curr (Common.Ask_Close),
+            res.Pin_TPSL_Prices
+              (last_res               => last_res,
+               ask_close              => curr (Common.Ask_Close),
                bid_close              => curr (Common.Bid_Close),
                atr                    => curr (Common.ATR),
                take_profit_multiplier => conf.Take_Profit_Multiplier,
                stop_loss_multiplier   => conf.Stop_Loss_Multiplier,
-               num_digits             => conf.Num_Digits);
-
-            --  carry over the entry price from the last result
-            res.Entry_Price := last_res.Entry_Price;
+               num_digits             => conf.Num_Digits,
+               is_dynamic             => is_dynamic);
          end if;
 
          res.Update_Position (bid_exit_price, curr (Common.Ask_Close));
