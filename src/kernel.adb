@@ -52,9 +52,6 @@ package body Kernel is
       num_digits             : Positive;
       behavior               : Common.TPSL_Behavior) is
    begin
-      --  pin the entry to the ask close at this tick
-      res.Entry_Price := ask_close;
-
       --  calc the tp and sl prices based on the pinned ask_close price
       if take_profit_multiplier /= 0.0 then
          res.Take_Profit_Price :=
@@ -77,8 +74,6 @@ package body Kernel is
       end if;
 
       if behavior = Common.TPSL_Dynamic and then last_res.Signal = 1 then
-         res.Entry_Price := last_res.Entry_Price;
-
          --  if the new calculation would exit the position then
          --  revert to original tp
          if take_profit_multiplier /= 0.0
@@ -106,23 +101,93 @@ package body Kernel is
              or else res.Entry_Price >= res.Stop_Loss_Price);
    end Pin_TPSL_Prices;
 
-   procedure Trigger_Stop_Loss (res : in out Kernel_Element'Class) is
+   procedure Process_Self_Managed_Exits
+      (res : in out Kernel_Element'Class;
+       curr : Common.Keyed_Lane;
+       conf : Scenario_Config) is
    begin
-      res.Signal := 0;
-      res.Trigger := -1;
-      res.Exit_Price := res.Stop_Loss_Price;
-      res.Stop_Losses := res.Stop_Losses + 1;
-      --  pragma Assert (res.Entry_Price >= res.Stop_Loss_Price);
-   end Trigger_Stop_Loss;
+      --  if quasi then the exit already happened and its just being
+      --  recorded
+      if conf.Is_Quasi then
+         if conf.Stop_Loss_Multiplier /= 0.0
+           and then res.Stop_Loss_Price > curr (Common.Bid_Open)
+         then
+            res.Signal := 0;
+            res.Trigger := -1;
+            res.Exit_Price := curr (Common.Bid_Open);
+            res.Stop_Losses := res.Stop_Losses + 1;
+         elsif conf.Take_Profit_Multiplier /= 0.0
+           and then res.Take_Profit_Price < curr (Common.Bid_Open)
+         then
+            res.Signal := 0;
+            res.Trigger := -1;
+            res.Exit_Price := curr (Common.Bid_Open);
+            res.Take_Profits := res.Take_Profits + 1;
+         end if;
+      else
+         if conf.Stop_Loss_Multiplier /= 0.0
+           and then res.Stop_Loss_Price > curr (Common.Bid_Close)
+         then
+            res.Signal := 0;
+            res.Trigger := -1;
+            res.Exit_Price := curr (Common.Bid_Close);
+            res.Stop_Losses := res.Stop_Losses + 1;
+         elsif conf.Take_Profit_Multiplier /= 0.0
+           and then res.Take_Profit_Price < curr (Common.Bid_Close)
+         then
+            res.Signal := 0;
+            res.Trigger := -1;
+            res.Exit_Price := curr (Common.Bid_Close);
+            res.Take_Profits := res.Take_Profits + 1;
+         end if;
+      end if;
+   end Process_Self_Managed_Exits;
 
-   procedure Trigger_Take_Profit (res : in out Kernel_Element'Class) is
+   procedure Process_Broker_Managed_Exits
+      (res : in out Kernel_Element'Class;
+       last_res : Kernel_Element'Class;
+       prev : Common.Keyed_Lane;
+       curr : Common.Keyed_Lane;
+       conf : Scenario_Config'Class) is
    begin
-      res.Signal := 0;
-      res.Trigger := -1;
-      res.Exit_Price := res.Take_Profit_Price;
-      res.Take_Profits := res.Take_Profits + 1;
-      --  pragma Assert (res.Entry_Price <= res.Take_Profit_Price);
-   end Trigger_Take_Profit;
+      --  if quasi then the exit already happened and its just being
+      --  recorded
+      if conf.Is_Quasi then
+         if conf.Stop_Loss_Multiplier /= 0.0
+           and then (last_res.Stop_Loss_Price > prev (Common.Bid_Low)
+                     or else res.Stop_Loss_Price > curr (Common.Bid_Open))
+         then
+            res.Signal := 0;
+            res.Trigger := -1;
+            res.Stop_Losses := res.Stop_Losses + 1;
+            res.Exit_Price := res.Stop_Loss_Price;
+         elsif conf.Take_Profit_Multiplier /= 0.0
+           and then (last_res.Take_Profit_Price < prev (Common.Bid_High)
+                     or else res.Take_Profit_Price < curr (Common.Bid_Open))
+         then
+            res.Signal := 0;
+            res.Trigger := -1;
+            res.Take_Profits := res.Take_Profits + 1;
+            res.Exit_Price := res.Take_Profit_Price;
+         end if;
+      else
+         if conf.Stop_Loss_Multiplier /= 0.0
+           and then res.Stop_Loss_Price > curr (Common.Bid_Low)
+         then
+            res.Signal := 0;
+            res.Trigger := -1;
+            res.Stop_Losses := res.Stop_Losses + 1;
+            res.Exit_Price := res.Stop_Loss_Price;
+         elsif conf.Take_Profit_Multiplier /= 0.0
+           and then res.Take_Profit_Price < curr (Common.Bid_High)
+         then
+            res.Signal := 0;
+            res.Trigger := -1;
+            res.Take_Profits := res.Take_Profits + 1;
+            res.Exit_Price := res.Take_Profit_Price;
+         end if;
+      end if;
+   end Process_Broker_Managed_Exits;
 
    procedure Update_Min_Max_Totals
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class) is
@@ -254,6 +319,9 @@ package body Kernel is
 
          return;
       elsif res.Trigger = 1 and then res.Signal = 1 then
+         --  pin the entry to the ask close at this tick
+         res.Entry_Price := curr (Common.Ask_Close);
+
          --  wma cross so pin the prices
          res.Pin_TPSL_Prices
            (last_res               => last_res,
@@ -286,32 +354,11 @@ package body Kernel is
          --  get ready to exit
          res.Carry_Over_Prices (last_res);
 
-         --  if quasi then the exit already happened and its just being
-         --  recorded
-         if conf.Is_Quasi then
-            if conf.Stop_Loss_Multiplier /= 0.0
-              and then (last_res.Stop_Loss_Price > prev (Common.Bid_Low)
-                        or else res.Stop_Loss_Price > curr (Common.Bid_Open))
-            then
-               res.Trigger_Stop_Loss;
-            elsif conf.Take_Profit_Multiplier /= 0.0
-              and then (last_res.Take_Profit_Price < prev (Common.Bid_High)
-                        or else res.Take_Profit_Price < curr (Common.Bid_Open))
-            then
-               res.Trigger_Take_Profit;
-            end if;
-         else
-            if conf.Stop_Loss_Multiplier /= 0.0
-              and then res.Stop_Loss_Price > curr (Common.Bid_Low)
-            then
-               res.Trigger_Stop_Loss;
-            elsif conf.Take_Profit_Multiplier /= 0.0
-              and then res.Take_Profit_Price < curr (Common.Bid_High)
-            then
-               res.Trigger_Take_Profit;
-            end if;
-         end if;
+         res.Process_Broker_Managed_Exits (last_res, prev, curr, conf);
+
       else
+         res.Entry_Price := last_res.Entry_Price;
+
          --  if self managed then recalc tpsl prior to actually exiting
          res.Pin_TPSL_Prices
            (last_res               => last_res,
@@ -322,43 +369,9 @@ package body Kernel is
             stop_loss_multiplier   => conf.Stop_Loss_Multiplier,
             num_digits             => conf.Num_Digits,
             behavior               => conf.Exit_Behavior);
-         res.Entry_Price := last_res.Entry_Price;
 
-         --  if quasi then the exit already happened and its just being
-         --  recorded
-         if conf.Is_Quasi then
-            if conf.Stop_Loss_Multiplier /= 0.0
-              and then res.Stop_Loss_Price > curr (Common.Bid_Open)
-            then
-               res.Signal := 0;
-               res.Trigger := -1;
-               res.Exit_Price := curr (Common.Bid_Open);
-               res.Stop_Losses := res.Stop_Losses + 1;
-            elsif conf.Take_Profit_Multiplier /= 0.0
-              and then res.Take_Profit_Price < curr (Common.Bid_Open)
-            then
-               res.Signal := 0;
-               res.Trigger := -1;
-               res.Exit_Price := curr (Common.Bid_Open);
-               res.Take_Profits := res.Take_Profits + 1;
-            end if;
-         else
-            if conf.Stop_Loss_Multiplier /= 0.0
-              and then res.Stop_Loss_Price > curr (Common.Bid_Close)
-            then
-               res.Signal := 0;
-               res.Trigger := -1;
-               res.Exit_Price := curr (Common.Bid_Close);
-               res.Stop_Losses := res.Stop_Losses + 1;
-            elsif conf.Take_Profit_Multiplier /= 0.0
-              and then res.Take_Profit_Price < curr (Common.Bid_Close)
-            then
-               res.Signal := 0;
-               res.Trigger := -1;
-               res.Exit_Price := curr (Common.Bid_Close);
-               res.Take_Profits := res.Take_Profits + 1;
-            end if;
-         end if;
+         res.Process_Self_Managed_Exits (curr, conf);
+
       end if;
 
       --  update the exit totals and or positions
@@ -366,6 +379,8 @@ package body Kernel is
          res.Update_Exit_Totals;
       else
          if conf.Exit_Behavior = Common.TPSL_Dynamic then
+            res.Entry_Price := last_res.Entry_Price;
+
             --  if dynamic then re-pin the tpsl prices
             res.Pin_TPSL_Prices
               (last_res               => last_res,

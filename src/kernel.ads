@@ -74,11 +74,17 @@ private
    procedure Carry_Over_Totals
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
 
-   --  execute the stop loss strategy
-   procedure Trigger_Stop_Loss (res : in out Kernel_Element'Class);
+   procedure Process_Self_Managed_Exits
+      (res : in out Kernel_Element'Class;
+       curr : Common.Keyed_Lane;
+       conf : Scenario_Config);
 
-   --  execute the take profit strategy
-   procedure Trigger_Take_Profit (res : in out Kernel_Element'Class);
+   procedure Process_Broker_Managed_Exits
+      (res : in out Kernel_Element'Class;
+       last_res : Kernel_Element'Class;
+       prev : Common.Keyed_Lane;
+       curr : Common.Keyed_Lane;
+       conf : Scenario_Config'Class);
 
    --  update the min and max exit totals
    procedure Update_Min_Max_Totals
