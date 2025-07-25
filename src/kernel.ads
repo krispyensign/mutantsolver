@@ -1,6 +1,7 @@
 pragma Ada_2022;
 with Core;
 with Common;
+use type Common.TPSL_Behavior;
 
 package Kernel is
 
@@ -63,7 +64,7 @@ private
       take_profit_multiplier : Float;
       stop_loss_multiplier   : Float;
       num_digits             : Positive;
-      is_dynamic             : Boolean);
+      behavior               : Common.TPSL_Behavior);
 
    --  carry over prices from the last Kernel_Element
    procedure Carry_Over_Prices

@@ -27,18 +27,11 @@ package body Config is
 
    function Load_Chart_Config (Result : TOML.Read_Result) return Chart_Config
    is
-      Chart_Root         : constant TOML.TOML_Value :=
-        Result.Value.Get ("chart");
-      has_tp_sl_behavior : constant Boolean :=
-        Result.Value.Has ("tp_sl_behavior");
+      Chart_Root : constant TOML.TOML_Value := Result.Value.Get ("chart");
    begin
       return
         (TPSL_Behavior          =>
-           (if has_tp_sl_behavior
-            then
-              Map_TP_SL_Behavior
-                ((Chart_Root.Get ("tp_sl_behavior").As_String))
-            else Common.TPSL_Default),
+           Map_TP_SL_Behavior (Chart_Root.Get ("tp_sl_behavior").As_String),
          Time_Period_Interval   =>
            Integer (Chart_Root.Get ("time_period_interval").As_Integer),
          Instrument             => Chart_Root.Get ("instrument").As_String,

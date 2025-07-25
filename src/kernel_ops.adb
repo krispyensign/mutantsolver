@@ -206,10 +206,6 @@ package body Kernel_Ops is
       result.total_found := 0;
       for take_profit_multiplier of Common.Online_Take_Profit_Multipliers loop
          for stop_loss_multiplier of Common.Online_Stop_Loss_Multipliers loop
-            if stop_loss_multiplier > take_profit_multiplier then
-               --  prevent sl > tp
-               goto Continue;
-            end if;
             Process_Kernel_Operation
               (p                      => p,
                result                 => result,
@@ -219,7 +215,6 @@ package body Kernel_Ops is
                wma_source_key         => conf.WMA_Source_Key,
                take_profit_multiplier => take_profit_multiplier,
                stop_loss_multiplier   => stop_loss_multiplier);
-            <<Continue>>
          end loop;
       end loop;
 
