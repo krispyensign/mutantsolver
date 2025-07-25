@@ -68,6 +68,7 @@ package body Kernel_Ops is
       conf :=
         (Start_Index            => chart.Time_Period_Interval,
          Is_Quasi               => is_quasi,
+         Exit_Behavior          => chart.TPSL_Behavior,
          Should_Roll            => should_roll,
          Num_Digits             => chart.Num_Digits,
          Take_Profit_Multiplier => take_profit_multiplier,
@@ -167,9 +168,12 @@ package body Kernel_Ops is
       for wma_source_key in Common.WMA_Source_Key'Range loop
          for entry_key in Common.Candle_Key'Range loop
             for exit_key in Common.Candle_Key'Range loop
-               for take_profit_multiplier of Common.Take_Profit_Multipliers
+               for take_profit_multiplier
+                 of Common.Offline_Take_Profit_Multipliers
                loop
-                  for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
+                  for stop_loss_multiplier
+                    of Common.Offline_Stop_Loss_Multipliers
+                  loop
                      Process_Kernel_Operation
                        (p                      => p,
                         result                 => result,
@@ -200,8 +204,12 @@ package body Kernel_Ops is
    begin
       --  queue the configs to the solver tasks
       result.total_found := 0;
-      for take_profit_multiplier of Common.Take_Profit_Multipliers loop
-         for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
+      for take_profit_multiplier of Common.Online_Take_Profit_Multipliers loop
+         for stop_loss_multiplier of Common.Online_Stop_Loss_Multipliers loop
+            if stop_loss_multiplier > take_profit_multiplier then
+               --  prevent sl > tp
+               goto Continue;
+            end if;
             Process_Kernel_Operation
               (p                      => p,
                result                 => result,
@@ -211,6 +219,7 @@ package body Kernel_Ops is
                wma_source_key         => conf.WMA_Source_Key,
                take_profit_multiplier => take_profit_multiplier,
                stop_loss_multiplier   => stop_loss_multiplier);
+            <<Continue>>
          end loop;
       end loop;
 

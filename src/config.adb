@@ -1,6 +1,20 @@
 with Ada.Text_IO;
+with Ada.Strings;
 
 package body Config is
+
+   function Map_TP_SL_Behavior (in_var : String) return Common.TPSL_Behavior is
+   begin
+      if in_var = "Default" then
+         return Common.TPSL_Default;
+      elsif in_var = "Self_Managed" then
+         return Common.TPSL_Self_Managed;
+      elsif in_var = "Dynamic" then
+         return Common.TPSL_Dynamic;
+      else
+         raise Constraint_Error;
+      end if;
+   end Map_TP_SL_Behavior;
 
    function Load_Oanda (Result : TOML.Read_Result) return Oanda_Access is
       Oanda_Root : constant TOML.TOML_Value := Result.Value.Get ("oanda");
@@ -13,10 +27,19 @@ package body Config is
 
    function Load_Chart_Config (Result : TOML.Read_Result) return Chart_Config
    is
-      Chart_Root : constant TOML.TOML_Value := Result.Value.Get ("chart");
+      Chart_Root         : constant TOML.TOML_Value :=
+        Result.Value.Get ("chart");
+      has_tp_sl_behavior : constant Boolean :=
+        Result.Value.Has ("tp_sl_behavior");
    begin
       return
-        (Time_Period_Interval   =>
+        (TPSL_Behavior          =>
+           (if has_tp_sl_behavior
+            then
+              Map_TP_SL_Behavior
+                ((Chart_Root.Get ("tp_sl_behavior").As_String))
+            else Common.TPSL_Default),
+         Time_Period_Interval   =>
            Integer (Chart_Root.Get ("time_period_interval").As_Integer),
          Instrument             => Chart_Root.Get ("instrument").As_String,
          Num_Digits             =>

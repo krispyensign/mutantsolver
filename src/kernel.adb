@@ -204,13 +204,15 @@ package body Kernel is
       index     : Positive;
       results   : in out Kernel_Elements)
    is
+      use type Common.TPSL_Behavior;
       bid_exit_price : constant Long_Float :=
         (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
 
       res        : Kernel_Element := results (index);
       last_res   : Kernel_Element := results (index - 1);
-      is_dynamic : constant Boolean := True;
+      is_dynamic : constant Boolean :=
+        (if conf.Exit_Behavior = Common.TPSL_Dynamic then True else False);
 
    begin
       --  calculate the wma signal
@@ -228,11 +230,6 @@ package body Kernel is
       --  prepare the result with the previous result totals
       res.Carry_Over_Totals (last_res);
 
-      --  trigger, signal, notes
-      --   0, 0, nothing
-      --   1, 1, trigger
-      --   0, 1, sustain -- check for tp/sl and calc more prices
-      --  -1, 0, exit strategy -- check for tp/sl and calc more prices
       if res.Trigger = -1 and then last_res.Trigger = 1 and then conf.Is_Quasi
       then
          --  if quasi and the previous candle is an open and this candle
@@ -243,7 +240,14 @@ package body Kernel is
          results (index - 1) := last_res;
 
          return;
-      elsif res.Trigger = 0 and then res.Signal = 0 then
+      end if;
+
+      --  trigger, signal, notes
+      --   0, 0, nothing
+      --   1, 1, trigger
+      --   0, 1, sustain -- check for tp/sl and calc more prices
+      --  -1, 0, exit strategy -- check for tp/sl and calc more prices
+      if res.Trigger = 0 and then res.Signal = 0 then
          --  nothing is happening currently so bail
          results (index) := res;
 

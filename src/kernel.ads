@@ -36,6 +36,7 @@ package Kernel is
       Entry_Key              : Common.Candle_Key := Common.Bid_Open;
       Exit_Key               : Common.Candle_Key := Common.Bid_Open;
       WMA_Source_Key         : Common.WMA_Source_Key := Common.WMA_Bid_Open;
+      Exit_Behavior          : Common.TPSL_Behavior;
    end record;
 
    procedure Kernel

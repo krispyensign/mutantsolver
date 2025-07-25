@@ -129,6 +129,7 @@ procedure Mutantsolver is
    procedure Summarize_Results is
    begin
       io.Put_Line (find_max_result.best_scenario_report'Image);
+      io.Put_Line (find_tpsl_result.best_scenario_report'Image);
       io.Put_Line
         ("et total:"
          & offline_results (chart.Offline_Set_Size).Exit_Total'Image);
