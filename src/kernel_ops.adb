@@ -134,7 +134,9 @@ package body Kernel_Ops is
          return;
       end if;
 
-      if sr.Min_Exit_Total < 0.0 and then sr.Max_Exit_Total < abs (sr.Min_Exit_Total) then
+      if sr.Min_Exit_Total < 0.0
+        and then sr.Max_Exit_Total < abs (sr.Min_Exit_Total)
+      then
          return;
       end if;
 

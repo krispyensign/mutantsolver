@@ -311,10 +311,22 @@ package body Kernel is
          res.Entry_Price := curr (Common.Ask_Close);
          res.Entries := res.Entries + 1;
 
+         -- pin the tp/sl prices if not self managed
          if conf.Exit_Behavior /= Common.TPSL_Self_Managed then
-            -- pin the tp/sl prices if not self managed
             res.Pin_TPSL_Prices
               (last_res => last_res, curr => curr, conf => conf);
+         end if;
+
+         --  if volatilty is not acceptable then do not enter a trade
+         if conf.Exit_Behavior = Common.TPSL_Self_Managed
+           and then curr (Common.Bid_Close) - curr (Common.Ask_Close)
+                    < -Long_Float (conf.Stop_Loss_Multiplier)
+                      * curr (Common.ATR)
+         then
+            res.Trigger := 0;
+            res.Signal := 0;
+            res.Entries := res.Entries - 1;
+            res.Entry_Price := 0.0;
          end if;
 
          results (index) := res;
@@ -324,9 +336,6 @@ package body Kernel is
          --  wma cross so set the exit prices
          res.Exit_Price := bid_exit_price;
          res.Crosses := res.Crosses + 1;
-         if conf.Exit_Behavior = Common.TPSL_Self_Managed then
-            return;
-         end if;
 
       end if;
 
