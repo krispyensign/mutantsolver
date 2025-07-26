@@ -93,7 +93,8 @@ package Common is
 
    Offline_Take_Profit_Multipliers :
      constant array (Positive range <>) of Float :=
-       [0.1,
+       [0.0,
+        0.1,
         0.2,
         0.3,
         0.4,
@@ -113,7 +114,7 @@ package Common is
 
    Offline_Stop_Loss_Multipliers :
      constant array (Positive range <>) of Float :=
-       [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0];
+       [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0];
 
    Online_Take_Profit_Multipliers :
      constant array (Positive range <>) of Float :=

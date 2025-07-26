@@ -76,17 +76,17 @@ procedure Mutantsolver is
    throughput          : Float := 0.0;
 
    --  scenario reporting variables
-   offline_results                   :
+   offline_results                    :
      Kernel.Kernel_Elements (1 .. chart.Offline_Set_Size);
-   zk_online_results                 :
+   zk_online_results                  :
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
-   refined_zk_online_results         :
+   refined_zk_online_results          :
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
-   pk_online_results                 :
+   pk_online_results                  :
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
-   find_max_offline_result                   : Kernel_Ops.Operation_Result;
+   find_max_offline_result            : Kernel_Ops.Operation_Result;
    find_refined_zk_offline_max_result : Kernel_Ops.Operation_Result;
-   find_pk_online_max_result         : Kernel_Ops.Operation_Result;
+   find_pk_online_max_result          : Kernel_Ops.Operation_Result;
 
    pragma Assert (offline_results'Length = chart.Offline_Set_Size);
    pragma Assert (offline_data_pool'Length = chart.Offline_Set_Size);
@@ -204,7 +204,8 @@ begin
    refined_zk_online_results :=
      Recover_Results
        (p     => online_data_pool,
-        conf  => find_refined_zk_offline_max_result.best_scenario_report.Config,
+        conf  =>
+          find_refined_zk_offline_max_result.best_scenario_report.Config,
         count => chart.Online_Set_Size);
 
    --  recover the online perfect knowledge results

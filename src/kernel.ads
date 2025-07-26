@@ -18,7 +18,8 @@ package Kernel is
 
       Take_Profits   : Natural := 0;
       Stop_Losses    : Natural := 0;
-      Crosses : Natural := 0;
+      Crosses        : Natural := 0;
+      Entries        : Natural := 0;
       Exit_Total     : Long_Float := 0.0;
       Wins           : Natural := 0;
       Losses         : Natural := 0;

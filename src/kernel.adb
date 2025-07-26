@@ -38,6 +38,8 @@ package body Kernel is
       res.Losses := last_res.Losses;
       res.Stop_Losses := last_res.Stop_Losses;
       res.Take_Profits := last_res.Take_Profits;
+      res.Entries := last_res.Entries;
+      res.Crosses := last_res.Crosses;
    end Carry_Over_Totals;
 
    procedure Pin_TPSL_Prices
@@ -116,44 +118,24 @@ package body Kernel is
    procedure Process_Self_Managed_Exits
      (res  : in out Kernel_Element'Class;
       curr : Common.Keyed_Lane;
-      conf : Scenario_Config) is
-      tp_value : constant Long_Float := conf.Take_Profit_Multiplier * curr (Common.ATR);
-      sl_value : constant Long_Float := -conf.Stop_Loss_Multiplier * curr (Common.ATR);
-      bid_exit_price : constant Long_Float := (if conf.Is_Quasi then curr (Common.Bid_Open)
+      conf : Scenario_Config)
+   is
+      tp_value       : constant Long_Float :=
+        Long_Float (conf.Take_Profit_Multiplier) * curr (Common.ATR);
+      sl_value       : constant Long_Float :=
+        Long_Float (-conf.Stop_Loss_Multiplier) * curr (Common.ATR);
+      bid_exit_price : constant Long_Float :=
+        (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
-      position : constant Long_Float := bid_exit_price - res.Exit_Price;
+      position       : constant Long_Float := bid_exit_price - res.Exit_Price;
    begin
-      if position <= sl_value then
+      if conf.Stop_Loss_Multiplier /= 0.0 and then position < sl_value then
          res.Trigger_Stop_Loss;
-         res.Exit_Price := curr (Common.Bid_Open);
-      end if;
-
-      --  if quasi then the exit already happened and its just being
-      --  recorded
-      if conf.Is_Quasi then
-         if conf.Stop_Loss_Multiplier /= 0.0
-           and then res.Stop_Loss_Price > curr (Common.Bid_Open)
-         then
-            res.Trigger_Stop_Loss;
-            res.Exit_Price := curr (Common.Bid_Open);
-         elsif conf.Take_Profit_Multiplier /= 0.0
-           and then res.Take_Profit_Price < curr (Common.Bid_Open)
-         then
-            res.Trigger_Take_Profit;
-            res.Exit_Price := curr (Common.Bid_Open);
-         end if;
-      else
-         if conf.Stop_Loss_Multiplier /= 0.0
-           and then res.Stop_Loss_Price > curr (Common.Bid_Close)
-         then
-            res.Trigger_Stop_Loss;
-            res.Exit_Price := curr (Common.Bid_Close);
-         elsif conf.Take_Profit_Multiplier /= 0.0
-           and then res.Take_Profit_Price < curr (Common.Bid_Close)
-         then
-            res.Trigger_Take_Profit;
-            res.Exit_Price := curr (Common.Bid_Close);
-         end if;
+         res.Exit_Price := bid_exit_price;
+      elsif conf.Take_Profit_Multiplier /= 0.0 and then position > tp_value
+      then
+         res.Trigger_Take_Profit;
+         res.Exit_Price := bid_exit_price;
       end if;
    end Process_Self_Managed_Exits;
 
@@ -213,7 +195,7 @@ package body Kernel is
 
    procedure Update_Wins_Losses (res : in out Kernel_Element'Class) is
    begin
-      if res.Exit_Value > 0.0 then
+      if res.Exit_Value >= 0.0 then
          res.Wins := res.Wins + 1;
       elsif res.Exit_Value < 0.0 then
          res.Losses := res.Losses + 1;
@@ -322,19 +304,22 @@ package body Kernel is
       if res.Trigger = 0 and then res.Signal = 0 then
          --  nothing is happening currently so bail
          results (index) := res;
-
          return;
+
       elsif res.Trigger = 1 and then res.Signal = 1 then
          --  pin the entry to the ask close at this tick
          res.Entry_Price := curr (Common.Ask_Close);
+         res.Entries := res.Entries + 1;
 
-         --  wma cross so pin the prices
-         res.Pin_TPSL_Prices
-           (last_res => last_res, curr => curr, conf => conf);
+         if conf.Exit_Behavior /= Common.TPSL_Self_Managed then
+            -- pin the tp/sl prices if not self managed
+            res.Pin_TPSL_Prices
+              (last_res => last_res, curr => curr, conf => conf);
+         end if;
 
          results (index) := res;
-
          return;
+
       elsif res.Trigger = -1 and then res.Signal = 0 then
          --  wma cross so set the exit prices
          res.Exit_Price := bid_exit_price;
@@ -342,6 +327,7 @@ package body Kernel is
          if conf.Exit_Behavior = Common.TPSL_Self_Managed then
             return;
          end if;
+
       end if;
 
       --  ensure that the state machine is valid
@@ -350,6 +336,7 @@ package body Kernel is
           (last_res.Signal = 1
              and then ((res.Trigger = -1 and then res.Signal = 0)
                        or else (res.Trigger = 0 and then res.Signal = 1)));
+      pragma Assert (res.Entries > 0);
 
       --  carry over the prices to continue current open position and or
       --  get ready to exit
@@ -365,8 +352,8 @@ package body Kernel is
       end if;
 
       --  the default behavior is to pin the tp/sl and not modify them
-      --  if not default then recalculate
-      if conf.Exit_Behavior /= Common.TPSL_Default then
+      --  if dynamic then recalculate
+      if conf.Exit_Behavior = Common.TPSL_Dynamic then
          res.Pin_TPSL_Prices
            (last_res => last_res, curr => curr, conf => conf);
       end if;
@@ -374,13 +361,11 @@ package body Kernel is
       --  update the exit value and totals or positions
       if res.Trigger = -1 then
          res.Update_Exit_Totals;
+         res.Update_Wins_Losses;
+         res.Update_Min_Max_Totals (last_res);
       else
          res.Update_Position (bid_exit_price, curr (Common.Ask_Close));
       end if;
-
-      --  update min/max totals and wins/losses
-      res.Update_Min_Max_Totals (last_res);
-      res.Update_Wins_Losses;
 
       results (index) := res;
 
