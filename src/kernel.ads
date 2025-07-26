@@ -18,6 +18,7 @@ package Kernel is
 
       Take_Profits   : Natural := 0;
       Stop_Losses    : Natural := 0;
+      Crosses : Natural := 0;
       Exit_Total     : Long_Float := 0.0;
       Wins           : Natural := 0;
       Losses         : Natural := 0;
@@ -56,15 +57,10 @@ private
 
    --  pin the prices to the current candle
    procedure Pin_TPSL_Prices
-     (res                    : in out Kernel_Element'Class;
-      last_res               : Kernel_Element'Class;
-      ask_close              : Long_Float;
-      bid_close              : Long_Float;
-      atr                    : Long_Float;
-      take_profit_multiplier : Float;
-      stop_loss_multiplier   : Float;
-      num_digits             : Positive;
-      behavior               : Common.TPSL_Behavior);
+     (res      : in out Kernel_Element'Class;
+      last_res : Kernel_Element'Class;
+      curr     : Common.Keyed_Lane;
+      conf     : Scenario_Config);
 
    --  carry over prices from the last Kernel_Element
    procedure Carry_Over_Prices
@@ -75,16 +71,16 @@ private
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
 
    procedure Process_Self_Managed_Exits
-      (res : in out Kernel_Element'Class;
-       curr : Common.Keyed_Lane;
-       conf : Scenario_Config);
+     (res  : in out Kernel_Element'Class;
+      curr : Common.Keyed_Lane;
+      conf : Scenario_Config);
 
    procedure Process_Broker_Managed_Exits
-      (res : in out Kernel_Element'Class;
-       last_res : Kernel_Element'Class;
-       prev : Common.Keyed_Lane;
-       curr : Common.Keyed_Lane;
-       conf : Scenario_Config'Class);
+     (res      : in out Kernel_Element'Class;
+      last_res : Kernel_Element'Class;
+      prev     : Common.Keyed_Lane;
+      curr     : Common.Keyed_Lane;
+      conf     : Scenario_Config'Class);
 
    --  update the min and max exit totals
    procedure Update_Min_Max_Totals

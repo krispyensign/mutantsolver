@@ -98,6 +98,7 @@ package body Kernel_Ops is
          Final_Total    => last_element.Exit_Total,
          Take_Profits   => last_element.Take_Profits,
          Stop_Losses    => last_element.Stop_Losses,
+         Crosses => last_element.Crosses,
          Ratio          => 0.0,
          Config         => conf);
       result.last_scenario_report := sr;

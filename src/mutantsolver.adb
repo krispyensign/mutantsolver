@@ -84,8 +84,8 @@ procedure Mutantsolver is
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
    pk_online_results                 :
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
-   find_max_result                   : Kernel_Ops.Operation_Result;
-   find_refined_zk_online_max_result : Kernel_Ops.Operation_Result;
+   find_max_offline_result                   : Kernel_Ops.Operation_Result;
+   find_refined_zk_offline_max_result : Kernel_Ops.Operation_Result;
    find_pk_online_max_result         : Kernel_Ops.Operation_Result;
 
    pragma Assert (offline_results'Length = chart.Offline_Set_Size);
@@ -128,11 +128,16 @@ procedure Mutantsolver is
 
    procedure Summarize_Results is
    begin
+      --  print the configs
+      io.Put_Line ("");
       io.Put_Line ("Offline result config");
-      io.Put_Line (find_max_result.best_scenario_report'Image);
+      io.Put_Line (find_max_offline_result.best_scenario_report'Image);
+      io.Put_Line ("");
       io.Put_Line ("Refined result config");
       io.Put_Line
-        (find_refined_zk_online_max_result.best_scenario_report'Image);
+        (find_refined_zk_offline_max_result.best_scenario_report'Image);
+
+      --  print the totals
       io.Put_Line
         ("et total:"
          & offline_results (chart.Offline_Set_Size).Exit_Total'Image);
@@ -147,52 +152,62 @@ procedure Mutantsolver is
          & pk_online_results (chart.Online_Set_Size).Exit_Total'Image);
       io.Put_Line
         ("found offline:"
-         & find_max_result.total_found'Image
+         & find_max_offline_result.total_found'Image
          & " /"
-         & find_max_result.total_count'Image);
+         & find_max_offline_result.total_count'Image);
+
+      --  print performance metrics
       io.Put_Line ("time:" & total_time_duration'Image & "s");
       throughput :=
-        Float (find_max_result.total_count)
+        Float (find_max_offline_result.total_count)
         / Float (Ada.Real_Time.To_Duration (total_time_duration));
       io.Put_Line ("throughput:" & throughput'Image);
+
    end Summarize_Results;
 
 begin
    start_time := Ada.Real_Time.Clock;
 
-   find_max_result :=
+   --  find the offline max
+   find_max_offline_result :=
      Kernel_Ops.Find_Max (p => offline_data_pool, chart => chart);
 
-   find_refined_zk_online_max_result :=
+   --  find the refined offline max
+   find_refined_zk_offline_max_result :=
      Kernel_Ops.Find_Max_TP_SL
        (p     => tp_sl_offline_data_pool,
         chart => chart,
-        conf  => find_max_result.best_scenario_report.Config);
+        conf  => find_max_offline_result.best_scenario_report.Config);
 
+   --  find the perfect knowledge max
    find_pk_online_max_result :=
      Kernel_Ops.Find_Max_TP_SL
        (p     => online_data_pool,
         chart => chart,
-        conf  => find_max_result.best_scenario_report.Config);
+        conf  => find_max_offline_result.best_scenario_report.Config);
 
+   --  recover the offline results
    offline_results :=
      Recover_Results
        (p     => offline_data_pool,
-        conf  => find_max_result.best_scenario_report.Config,
+        conf  => find_max_offline_result.best_scenario_report.Config,
         count => chart.Offline_Set_Size);
 
+   --  recover the online zero knowledge results
    zk_online_results :=
      Recover_Results
        (p     => online_data_pool,
-        conf  => find_max_result.best_scenario_report.Config,
+        conf  => find_max_offline_result.best_scenario_report.Config,
         count => chart.Online_Set_Size);
 
+   --  recover the online zero knowledge refined results
    refined_zk_online_results :=
      Recover_Results
-       (p     => tp_sl_offline_data_pool,
-        conf  => find_refined_zk_online_max_result.best_scenario_report.Config,
+       (p     => online_data_pool,
+        conf  => find_refined_zk_offline_max_result.best_scenario_report.Config,
         count => chart.Online_Set_Size);
 
+   --  recover the online perfect knowledge results
    pk_online_results :=
      Recover_Results
        (p     => online_data_pool,
