@@ -2,6 +2,8 @@ pragma Ada_2022;
 
 package Common is
 
+   type TPSL_Behavior is (TPSL_Default, TPSL_Dynamic, TPSL_Self_Managed);
+
    type Real_Array is array (Positive range <>) of Long_Float;
    type Real_Array_Ptr is not null access all Real_Array;
    type Pool_Key is
@@ -89,27 +91,52 @@ package Common is
      array (Common.Pool_Key range Common.Pool_Key'Range) of Long_Float;
    type Row_Pool is array (Positive range <>) of Keyed_Lane;
 
-   Take_Profit_Multipliers : constant array (Positive range <>) of Float :=
-     [0.0,
-      0.1,
-      0.2,
-      0.3,
-      0.4,
-      0.5,
-      0.6,
-      0.7,
-      0.8,
-      0.9,
-      1.0,
-      2.0,
-      3.0,
-      4.0,
-      5.0,
-      6.0,
-      7.0,
-      8.0];
+   Offline_Take_Profit_Multipliers :
+     constant array (Positive range <>) of Float :=
+       [0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0];
 
-   Stop_Loss_Multipliers : constant array (Positive range <>) of Float :=
-     [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0];
+   Offline_Stop_Loss_Multipliers :
+     constant array (Positive range <>) of Float :=
+       [0.0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0];
 
+   Online_Take_Profit_Multipliers :
+     constant array (Positive range <>) of Float :=
+       [0.1,
+        0.2,
+        0.3,
+        0.4,
+        0.5,
+        0.6,
+        0.7,
+        0.8,
+        0.9,
+        1.0,
+        2.0,
+        3.0,
+        4.0,
+        5.0,
+        6.0,
+        7.0,
+        8.0];
+
+   Online_Stop_Loss_Multipliers :
+     constant array (Positive range <>) of Float :=
+       [0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 2.0, 3.0, 4.0];
 end Common;

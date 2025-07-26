@@ -11,6 +11,8 @@ package Kernel_Ops is
       Losses         : Natural := 0;
       Take_Profits   : Natural := 0;
       Stop_Losses    : Natural := 0;
+      Crosses        : Natural := 0;
+      Entries        : Natural := 0;
       Max_Exit_Total : Long_Float := Long_Float'First;
       Min_Exit_Total : Long_Float := Long_Float'Last;
       Ratio          : Float := 0.0;

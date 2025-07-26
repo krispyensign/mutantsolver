@@ -4,6 +4,7 @@ with TOML;
 with Ada.Strings.Unbounded;
 use Ada;
 use Ada.Strings;
+with Common;
 
 package Config is
    type Oanda_Access is record
@@ -20,6 +21,7 @@ package Config is
       Online_Set_Size        : Positive;
       TP_SL_Offline_Set_Size : Positive;
       Time_Period_Interval   : Positive;
+      TPSL_Behavior          : Common.TPSL_Behavior;
    end record
    with
      Dynamic_Predicate =>

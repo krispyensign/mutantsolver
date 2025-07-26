@@ -9,7 +9,7 @@
 /config/
 
 # local private configs
-local_config.toml
+*.toml
 
 # other editor info
 .vscode/

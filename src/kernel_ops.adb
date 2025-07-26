@@ -38,6 +38,7 @@ package body Kernel_Ops is
       take_profit_multiplier : Float;
       stop_loss_multiplier   : Float)
    is
+      use type Common.TPSL_Behavior;
       cur_scen_res : Kernel.Kernel_Elements (1 .. p'Length);
       last_element : Kernel.Kernel_Element;
       ratio        : Float := 0.0;
@@ -45,6 +46,7 @@ package body Kernel_Ops is
       should_roll  : Boolean := False;
       conf         : Kernel.Scenario_Config;
       sr           : Scenario_Report;
+
    begin
       --  prevent sl > tp
       --  TODO make this toggle
@@ -68,6 +70,7 @@ package body Kernel_Ops is
       conf :=
         (Start_Index            => chart.Time_Period_Interval,
          Is_Quasi               => is_quasi,
+         Exit_Behavior          => chart.TPSL_Behavior,
          Should_Roll            => should_roll,
          Num_Digits             => chart.Num_Digits,
          Take_Profit_Multiplier => take_profit_multiplier,
@@ -97,6 +100,8 @@ package body Kernel_Ops is
          Final_Total    => last_element.Exit_Total,
          Take_Profits   => last_element.Take_Profits,
          Stop_Losses    => last_element.Stop_Losses,
+         Crosses        => last_element.Crosses,
+         Entries        => last_element.Entries,
          Ratio          => 0.0,
          Config         => conf);
       result.last_scenario_report := sr;
@@ -112,27 +117,40 @@ package body Kernel_Ops is
          result.total_found := result.total_found + 1;
       end if;
 
-      --  if the best final total is less than or equal to zero
-      --  and the current final total is greater than the best
-      --  then update the best scenario report despite the final total
-      --  being less than or equal to zero
-      --  this is to ensure we capture the best scenario report
-      --  even if it has a final total of zero or less
-      --  this is useful for debugging and understanding the scenarios
-      --  that lead to a zero or negative final total
       if result.best_scenario_report.Final_Total <= 0.0
         and then sr.Final_Total > result.best_scenario_report.Final_Total
       then
+         --  calculate the ratio
+         ratio :=
+           (if sr.Wins + sr.Losses > 0
+            then Float (sr.Wins) / Float (sr.Wins + sr.Losses)
+            else 0.0);
+         sr.Ratio := ratio;
          result.best_scenario_report := sr;
          io.Put_Line (result.best_scenario_report'Image);
       end if;
 
-      --  if the final total is less than or equal to zero then bail
-      --  or if the max exit total is less than or equal to the absolute value
-      --  of the min exit total then bail
-      if sr.Final_Total <= 0.0
-        or else sr.Max_Exit_Total <= abs (sr.Min_Exit_Total)
+      if sr.Final_Total <= 0.0 then
+         return;
+      end if;
+
+      if sr.Min_Exit_Total < 0.0
+        and then sr.Max_Exit_Total < abs (sr.Min_Exit_Total)
       then
+         return;
+      end if;
+
+      if conf.Exit_Behavior = Common.TPSL_Self_Managed
+        and then sr.Final_Total > result.best_scenario_report.Final_Total
+      then
+         --  calculate the ratio
+         ratio :=
+           (if sr.Wins + sr.Losses > 0
+            then Float (sr.Wins) / Float (sr.Wins + sr.Losses)
+            else 0.0);
+         sr.Ratio := ratio;
+         result.best_scenario_report := sr;
+         io.Put_Line (result.best_scenario_report'Image);
          return;
       end if;
 
@@ -167,18 +185,21 @@ package body Kernel_Ops is
       for wma_source_key in Common.WMA_Source_Key'Range loop
          for entry_key in Common.Candle_Key'Range loop
             for exit_key in Common.Candle_Key'Range loop
-               for take_profit_multiplier of Common.Take_Profit_Multipliers
+               for take_profit_multiplier
+                 of Common.Offline_Take_Profit_Multipliers
                loop
-                  for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
+                  for stop_loss_multiplier
+                    of Common.Offline_Stop_Loss_Multipliers
+                  loop
                      Process_Kernel_Operation
-                       (p => p,
-                        result => result,
-                        chart => chart,
-                        entry_key => entry_key,
-                        exit_key => exit_key,
-                        wma_source_key => wma_source_key,
+                       (p                      => p,
+                        result                 => result,
+                        chart                  => chart,
+                        entry_key              => entry_key,
+                        exit_key               => exit_key,
+                        wma_source_key         => wma_source_key,
                         take_profit_multiplier => take_profit_multiplier,
-                        stop_loss_multiplier => stop_loss_multiplier);
+                        stop_loss_multiplier   => stop_loss_multiplier);
                   end loop;
                end loop;
             end loop;
@@ -200,17 +221,17 @@ package body Kernel_Ops is
    begin
       --  queue the configs to the solver tasks
       result.total_found := 0;
-      for take_profit_multiplier of Common.Take_Profit_Multipliers loop
-         for stop_loss_multiplier of Common.Stop_Loss_Multipliers loop
+      for take_profit_multiplier of Common.Online_Take_Profit_Multipliers loop
+         for stop_loss_multiplier of Common.Online_Stop_Loss_Multipliers loop
             Process_Kernel_Operation
-              (p => p,
-               result => result,
-               chart => chart,
-               entry_key => conf.Entry_Key,
-               exit_key => conf.Exit_Key,
-               wma_source_key => conf.WMA_Source_Key,
+              (p                      => p,
+               result                 => result,
+               chart                  => chart,
+               entry_key              => conf.Entry_Key,
+               exit_key               => conf.Exit_Key,
+               wma_source_key         => conf.WMA_Source_Key,
                take_profit_multiplier => take_profit_multiplier,
-               stop_loss_multiplier => stop_loss_multiplier);
+               stop_loss_multiplier   => stop_loss_multiplier);
          end loop;
       end loop;
 

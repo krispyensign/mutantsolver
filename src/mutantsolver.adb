@@ -76,14 +76,17 @@ procedure Mutantsolver is
    throughput          : Float := 0.0;
 
    --  scenario reporting variables
-   offline_results           :
+   offline_results                    :
      Kernel.Kernel_Elements (1 .. chart.Offline_Set_Size);
-   zk_online_results         :
+   zk_online_results                  :
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
-   refined_zk_online_results :
+   refined_zk_online_results          :
      Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
-   find_max_result           : Kernel_Ops.Operation_Result;
-   find_tpsl_result          : Kernel_Ops.Operation_Result;
+   pk_online_results                  :
+     Kernel.Kernel_Elements (1 .. chart.Online_Set_Size);
+   find_max_offline_result            : Kernel_Ops.Operation_Result;
+   find_refined_zk_offline_max_result : Kernel_Ops.Operation_Result;
+   find_pk_online_max_result          : Kernel_Ops.Operation_Result;
 
    pragma Assert (offline_results'Length = chart.Offline_Set_Size);
    pragma Assert (offline_data_pool'Length = chart.Offline_Set_Size);
@@ -92,6 +95,7 @@ procedure Mutantsolver is
      Assert (tp_sl_offline_data_pool'Length = chart.TP_SL_Offline_Set_Size);
    pragma Assert (zk_online_results'Length = chart.Online_Set_Size);
    pragma Assert (refined_zk_online_results'Length = chart.Online_Set_Size);
+   pragma Assert (pk_online_results'Length = chart.Online_Set_Size);
 
    procedure Print_Most_Recent_Candle is
    begin
@@ -124,7 +128,16 @@ procedure Mutantsolver is
 
    procedure Summarize_Results is
    begin
-      io.Put_Line (find_max_result.best_scenario_report'Image);
+      --  print the configs
+      io.Put_Line ("");
+      io.Put_Line ("Offline result config");
+      io.Put_Line (find_max_offline_result.best_scenario_report'Image);
+      io.Put_Line ("");
+      io.Put_Line ("Refined result config");
+      io.Put_Line
+        (find_refined_zk_offline_max_result.best_scenario_report'Image);
+
+      --  print the totals
       io.Put_Line
         ("et total:"
          & offline_results (chart.Offline_Set_Size).Exit_Total'Image);
@@ -135,52 +148,77 @@ procedure Mutantsolver is
         ("refined zk total:"
          & refined_zk_online_results (chart.Online_Set_Size).Exit_Total'Image);
       io.Put_Line
+        ("pk total:"
+         & pk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+      io.Put_Line
         ("found offline:"
-         & find_max_result.total_found'Image
+         & find_max_offline_result.total_found'Image
          & " /"
-         & find_max_result.total_count'Image);
+         & find_max_offline_result.total_count'Image);
+
+      --  print performance metrics
       io.Put_Line ("time:" & total_time_duration'Image & "s");
       throughput :=
-        Float (find_max_result.total_count)
+        Float (find_max_offline_result.total_count)
         / Float (Ada.Real_Time.To_Duration (total_time_duration));
       io.Put_Line ("throughput:" & throughput'Image);
+
    end Summarize_Results;
 
 begin
    start_time := Ada.Real_Time.Clock;
 
-   find_max_result :=
+   --  find the offline max
+   find_max_offline_result :=
      Kernel_Ops.Find_Max (p => offline_data_pool, chart => chart);
 
-   find_tpsl_result :=
+   --  find the refined offline max
+   find_refined_zk_offline_max_result :=
      Kernel_Ops.Find_Max_TP_SL
        (p     => tp_sl_offline_data_pool,
         chart => chart,
-        conf  => find_max_result.best_scenario_report.Config);
+        conf  => find_max_offline_result.best_scenario_report.Config);
 
-   Print_Most_Recent_Candle;
+   --  find the perfect knowledge max
+   find_pk_online_max_result :=
+     Kernel_Ops.Find_Max_TP_SL
+       (p     => online_data_pool,
+        chart => chart,
+        conf  => find_max_offline_result.best_scenario_report.Config);
 
+   --  recover the offline results
    offline_results :=
      Recover_Results
        (p     => offline_data_pool,
-        conf  => find_max_result.best_scenario_report.Config,
+        conf  => find_max_offline_result.best_scenario_report.Config,
         count => chart.Offline_Set_Size);
 
+   --  recover the online zero knowledge results
    zk_online_results :=
      Recover_Results
        (p     => online_data_pool,
-        conf  => find_max_result.best_scenario_report.Config,
+        conf  => find_max_offline_result.best_scenario_report.Config,
         count => chart.Online_Set_Size);
 
+   --  recover the online zero knowledge refined results
    refined_zk_online_results :=
      Recover_Results
        (p     => online_data_pool,
-        conf  => find_tpsl_result.best_scenario_report.Config,
+        conf  =>
+          find_refined_zk_offline_max_result.best_scenario_report.Config,
+        count => chart.Online_Set_Size);
+
+   --  recover the online perfect knowledge results
+   pk_online_results :=
+     Recover_Results
+       (p     => online_data_pool,
+        conf  => find_pk_online_max_result.best_scenario_report.Config,
         count => chart.Online_Set_Size);
 
    end_time := Ada.Real_Time.Clock;
    total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
+   Print_Most_Recent_Candle;
    Summarize_Results;
 
 end Mutantsolver;
