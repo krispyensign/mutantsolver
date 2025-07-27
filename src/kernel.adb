@@ -17,6 +17,14 @@ package body Kernel is
       res.Exit_Value := 0.0;
       res.Exit_Total := reference_res.Exit_Total;
       res.Running_Total := reference_res.Exit_Total;
+      res.Crosses := reference_res.Crosses;
+      res.Entries := reference_res.Entries;
+      res.Wins := reference_res.Wins;
+      res.Losses := reference_res.Losses;
+      res.Stop_Losses := reference_res.Stop_Losses;
+      res.Take_Profits := reference_res.Take_Profits;
+      res.Min_Exit_Total := reference_res.Min_Exit_Total;
+      res.Max_Exit_Total := reference_res.Max_Exit_Total;
    end Reset;
 
    procedure Carry_Over_Prices
@@ -311,7 +319,7 @@ package body Kernel is
          res.Entry_Price := curr (Common.Ask_Close);
          res.Entries := res.Entries + 1;
 
-         -- pin the tp/sl prices if not self managed
+         --  pin the tp/sl prices if not self managed
          if conf.Exit_Behavior /= Common.TPSL_Self_Managed then
             res.Pin_TPSL_Prices
               (last_res => last_res, curr => curr, conf => conf);
@@ -323,10 +331,7 @@ package body Kernel is
                     < -Long_Float (conf.Stop_Loss_Multiplier)
                       * curr (Common.ATR)
          then
-            res.Trigger := 0;
-            res.Signal := 0;
-            res.Entries := res.Entries - 1;
-            res.Entry_Price := 0.0;
+            res.Reset (last_res);
          end if;
 
          results (index) := res;
