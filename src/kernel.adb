@@ -136,7 +136,7 @@ package body Kernel is
       bid_exit_price : constant Long_Float :=
         (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
-      position       : constant Long_Float := bid_exit_price - res.Exit_Price;
+      position       : constant Long_Float := bid_exit_price - res.Entry_Price;
    begin
       if conf.Stop_Loss_Multiplier /= 0.0 and then position < sl_value then
          res.Trigger_Stop_Loss;
@@ -328,7 +328,7 @@ package body Kernel is
          end if;
 
          --  if volatilty is not acceptable then do not enter a trade
-         if conf.Should_Screen_ATR 
+         if conf.Should_Screen_ATR
            and then curr (Common.Bid_Close) - curr (Common.Ask_Close)
                     < -Long_Float (conf.Stop_Loss_Multiplier)
                       * curr (Common.ATR)
