@@ -30,6 +30,21 @@ begin
 
    result := Solver.Offline_Solve (ex_candles => ex_candles, chart => chart);
 
+   io.Put_Line ("Done!");
+
    --  print the configs
-   io.Put_Line (result'Image);
+   io.Put_Line
+     ("ins: "
+      & chart.Instrument
+      & " satr:"
+      & chart.Should_Screen_ATR'Image
+      & " tp:"
+      & chart.TPSL_Behavior'Image);
+   io.Put_Line
+     ("zet:"
+      & result.ZK_Online_Result.Exit_Total'Image
+      & " ret:"
+      & result.ZK_Refined_Online_Result.Exit_Total'Image
+      & " et:"
+      & result.Best_Scenario_Result.Exit_Total'Image);
 end Mutantsolver;
