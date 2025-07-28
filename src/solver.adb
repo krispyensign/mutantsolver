@@ -1,7 +1,6 @@
 pragma Ada_2022;
 
 with Ada.Text_IO;
-with Ada.Real_Time;
 with Pools;
 
 package body Solver is
@@ -41,7 +40,6 @@ package body Solver is
       stop_loss_multiplier   : Float)
    is
       cur_scen_res : Kernel.Kernel_Elements (1 .. p'Length);
-      last_element : Kernel.Kernel_Element;
       ratio        : Float := 0.0;
       is_quasi     : Boolean := False;
       should_roll  : Boolean := False;
@@ -93,9 +91,7 @@ package body Solver is
       end loop;
 
       --  get the last element and prepare the scenario report
-      last_element := cur_scen_res (p'Length - 1);
-      result.Last_Scenario_Config := conf;
-      result.Last_Scenario_Result := last_element;
+      sr := cur_scen_res (cur_scen_res'Last);
       result.Total_Reported := result.Total_Reported + 1;
 
       --  if the final total is first then this is the first report
@@ -252,9 +248,12 @@ package body Solver is
       return results;
    end Recover_Results;
 
-   procedure Offline_Solve
-     (ex_candles : Core.Candles; chart : Config.Chart_Config; count : Positive)
+   function Offline_Solve
+     (ex_candles : Core.Candles; chart : Config.Chart_Config)
+      return Offline_Solve_Result
    is
+      count          : constant Positive :=
+        chart.Offline_Set_Size + chart.Online_Set_Size;
       --  full_data_pool is a pool that contains all candles
       --  populate the full data pool from the retrieved candles
       package full_p is new Pools (Count => count);
@@ -305,7 +304,6 @@ package body Solver is
       start_time          : Ada.Real_Time.Time;
       end_time            : Ada.Real_Time.Time;
       total_time_duration : Ada.Real_Time.Time_Span;
-      throughput          : Float := 0.0;
 
       --  scenario reporting variables
       offline_results                    :
@@ -350,14 +348,6 @@ package body Solver is
            chart => chart,
            conf  => find_max_offline_result.Best_Scenario_Config);
 
-      --  recover the offline results
-      offline_results :=
-        Recover_Results
-          (p     => offline_data_pool,
-           chart => chart,
-           conf  => find_max_offline_result.Best_Scenario_Config,
-           count => chart.Offline_Set_Size);
-
       --  recover the online zero knowledge results
       zk_online_results :=
         Recover_Results
@@ -371,8 +361,7 @@ package body Solver is
         Recover_Results
           (p     => online_data_pool,
            chart => chart,
-           conf  =>
-             find_refined_zk_offline_max_result.Best_Scenario_Config,
+           conf  => find_refined_zk_offline_max_result.Best_Scenario_Config,
            count => chart.Online_Set_Size);
 
       --  recover the online perfect knowledge results
@@ -387,55 +376,27 @@ package body Solver is
       total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
       Print_Most_Recent_Candle (chart, online_data_pool);
-      --  print the configs
-      io.Put_Line ("");
-      io.Put_Line ("Offline result config");
-      io.Put_Line (find_max_offline_result.Best_Scenario_Config'Image);
-      io.Put_Line (find_max_offline_result.Best_Scenario_Result'Image);
-      io.Put_Line (find_max_offline_result.Best_Scenario_Ratio'Image);
-      io.Put_Line ("");
-      io.Put_Line ("Refined result config");
-      io.Put_Line
-        (find_refined_zk_offline_max_result.Best_Scenario_Config'Image);
-      io.Put_Line
-        (find_refined_zk_offline_max_result.Best_Scenario_Result'Image);
-      io.Put_Line
-        (find_refined_zk_offline_max_result.Best_Scenario_Ratio'Image);
 
-      --  print the totals
-      io.Put_Line
-        ("et total:"
-         & offline_results (chart.Offline_Set_Size).Exit_Total'Image
-         & " /"
-         & offline_results (chart.Offline_Set_Size).Running_Total'Image);
-      io.Put_Line
-        ("zk total:"
-         & zk_online_results (chart.Online_Set_Size).Exit_Total'Image
-         & " /"
-         & zk_online_results (chart.Online_Set_Size).Running_Total'Image);
-      io.Put_Line
-        ("refined zk total:"
-         & refined_zk_online_results (chart.Online_Set_Size).Exit_Total'Image
-         & " /"
-         & refined_zk_online_results (chart.Online_Set_Size)
-             .Running_Total'Image);
-      io.Put_Line
-        ("pk total:"
-         & pk_online_results (chart.Online_Set_Size).Exit_Total'Image
-         & " /"
-         & pk_online_results (chart.Online_Set_Size).Running_Total'Image);
-      io.Put_Line
-        ("found offline:"
-         & find_max_offline_result.Total_Found'Image
-         & " /"
-         & find_max_offline_result.Total_Count'Image);
-
-      --  print performance metrics
-      io.Put_Line ("time:" & total_time_duration'Image & "s");
-      throughput :=
-        Float (find_max_offline_result.Total_Count)
-        / Float (Ada.Real_Time.To_Duration (total_time_duration));
-      io.Put_Line ("throughput:" & throughput'Image);
+      return
+        (Best_Scenario_Config     =>
+           find_max_offline_result.Best_Scenario_Config,
+         Best_Scenario_Result     =>
+           find_max_offline_result.Best_Scenario_Result,
+         Refined_Config           =>
+           find_refined_zk_offline_max_result.Best_Scenario_Config,
+         Refined_Result           =>
+           find_refined_zk_offline_max_result.Best_Scenario_Result,
+         ZK_Online_Result         => zk_online_results (chart.Online_Set_Size),
+         ZK_Refined_Online_Result =>
+           refined_zk_online_results (chart.Online_Set_Size),
+         PK_Online_Result         => pk_online_results (chart.Online_Set_Size),
+         Total_Time_Duration      => total_time_duration,
+         Throughput               =>
+           Float (find_max_offline_result.Total_Count)
+           / Float (Ada.Real_Time.To_Duration (total_time_duration)),
+         Total_Count              => find_max_offline_result.Total_Count,
+         Total_Reported           => find_max_offline_result.Total_Reported,
+         Total_Found              => find_max_offline_result.Total_Found);
 
    end Offline_Solve;
 
