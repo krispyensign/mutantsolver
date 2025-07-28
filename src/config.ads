@@ -22,6 +22,7 @@ package Config is
       TP_SL_Offline_Set_Size : Positive;
       Time_Period_Interval   : Positive;
       TPSL_Behavior          : Common.TPSL_Behavior;
+      Should_Screen_ATR      : Boolean;
    end record
    with
      Dynamic_Predicate =>

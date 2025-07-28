@@ -16,7 +16,7 @@ package body Kernel is
       res.Position := 0.0;
       res.Exit_Value := 0.0;
       res.Exit_Total := reference_res.Exit_Total;
-      res.Running_Total := reference_res.Exit_Total;
+      res.Running_Total := reference_res.Running_Total;
       res.Crosses := reference_res.Crosses;
       res.Entries := reference_res.Entries;
       res.Wins := reference_res.Wins;
@@ -40,6 +40,7 @@ package body Kernel is
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class) is
    begin
       res.Exit_Total := last_res.Exit_Total;
+      res.Running_Total := last_res.Running_Total;
       res.Min_Exit_Total := last_res.Min_Exit_Total;
       res.Max_Exit_Total := last_res.Max_Exit_Total;
       res.Wins := last_res.Wins;
@@ -275,6 +276,7 @@ package body Kernel is
 
       res      : Kernel_Element := results (index);
       last_res : Kernel_Element := results (index - 1);
+      last_last_res : constant Kernel_Element := results (index - 2);
 
    begin
       --  calculate the wma signal
@@ -296,8 +298,8 @@ package body Kernel is
       then
          --  if quasi and the previous candle is an open and this candle
          --  is a close then erase and bail
+         last_res.Reset (last_last_res);
          res.Reset (last_res);
-         last_res.Reset (last_res);
          results (index) := res;
          results (index - 1) := last_res;
 
@@ -326,7 +328,7 @@ package body Kernel is
          end if;
 
          --  if volatilty is not acceptable then do not enter a trade
-         if conf.Exit_Behavior = Common.TPSL_Self_Managed
+         if conf.Should_Screen_ATR 
            and then curr (Common.Bid_Close) - curr (Common.Ask_Close)
                     < -Long_Float (conf.Stop_Loss_Multiplier)
                       * curr (Common.ATR)

@@ -32,6 +32,8 @@ package body Config is
       return
         (TPSL_Behavior          =>
            Map_TP_SL_Behavior (Chart_Root.Get ("tp_sl_behavior").As_String),
+         Should_Screen_ATR      =>
+           Chart_Root.Get ("should_screen_atr").As_Boolean,
          Time_Period_Interval   =>
            Integer (Chart_Root.Get ("time_period_interval").As_Integer),
          Instrument             => Chart_Root.Get ("instrument").As_String,

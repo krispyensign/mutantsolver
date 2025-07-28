@@ -39,9 +39,9 @@ procedure Mutantsolver is
    package offline_p is new Pools (Count => chart.Offline_Set_Size);
    offline_data_pool : constant Common.Row_Pool :=
      offline_p.Make_Row_Pool
-       ([for i in Common.Pool_Key'Range
-         => offline_p.Swim_Lane
-              (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
+       ([for i in Common.Pool_Key'Range =>
+           offline_p.Swim_Lane
+             (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
 
    --  tp_sl_offline_data_pool is a pool that contains a copied slice of the
    --  offline candles that will be used for solving for optimized take profit
@@ -52,11 +52,13 @@ procedure Mutantsolver is
      Pools (Count => chart.TP_SL_Offline_Set_Size);
    tp_sl_offline_data_pool : constant Common.Row_Pool :=
      tp_sl_offline_p.Make_Row_Pool
-       ([for key in Common.Pool_Key'Range
-         => tp_sl_offline_p.Swim_Lane
-              (full_data_pool (key)
-                 (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
-                  .. chart.Offline_Set_Size))]);
+       ([for key in Common.Pool_Key'Range =>
+           tp_sl_offline_p.Swim_Lane
+             (full_data_pool (key)
+                (chart.Offline_Set_Size
+                 - chart.TP_SL_Offline_Set_Size
+                 + 1
+                 .. chart.Offline_Set_Size))]);
 
    --  online_data_pool is a pool that contains the online candles that
    --  will not be solved for and are only used for zero knowledge evaluation
@@ -65,9 +67,9 @@ procedure Mutantsolver is
    package online_p is new Pools (Count => chart.Online_Set_Size);
    online_data_pool : constant Common.Row_Pool :=
      online_p.Make_Row_Pool
-       ([for i in Common.Pool_Key'Range
-         => online_p.Swim_Lane
-              (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
+       ([for i in Common.Pool_Key'Range =>
+           online_p.Swim_Lane
+             (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
 
    --  performance metrics
    start_time          : Ada.Real_Time.Time;
@@ -140,16 +142,25 @@ procedure Mutantsolver is
       --  print the totals
       io.Put_Line
         ("et total:"
-         & offline_results (chart.Offline_Set_Size).Exit_Total'Image);
+         & offline_results (chart.Offline_Set_Size).Exit_Total'Image
+         & " /"
+         & offline_results (chart.Offline_Set_Size).Running_Total'Image);
       io.Put_Line
         ("zk total:"
-         & zk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+         & zk_online_results (chart.Online_Set_Size).Exit_Total'Image
+         & " /"
+         & zk_online_results (chart.Online_Set_Size).Running_Total'Image);
       io.Put_Line
         ("refined zk total:"
-         & refined_zk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+         & refined_zk_online_results (chart.Online_Set_Size).Exit_Total'Image
+         & " /"
+         & refined_zk_online_results (chart.Online_Set_Size)
+             .Running_Total'Image);
       io.Put_Line
         ("pk total:"
-         & pk_online_results (chart.Online_Set_Size).Exit_Total'Image);
+         & pk_online_results (chart.Online_Set_Size).Exit_Total'Image
+         & " /"
+         & pk_online_results (chart.Online_Set_Size).Running_Total'Image);
       io.Put_Line
         ("found offline:"
          & find_max_offline_result.total_found'Image

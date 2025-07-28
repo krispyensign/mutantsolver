@@ -38,7 +38,6 @@ package body Kernel_Ops is
       take_profit_multiplier : Float;
       stop_loss_multiplier   : Float)
    is
-      use type Common.TPSL_Behavior;
       cur_scen_res : Kernel.Kernel_Elements (1 .. p'Length);
       last_element : Kernel.Kernel_Element;
       ratio        : Float := 0.0;
@@ -69,8 +68,9 @@ package body Kernel_Ops is
       --  prepare the scenario config
       conf :=
         (Start_Index            => chart.Time_Period_Interval,
-         Is_Quasi               => is_quasi,
          Exit_Behavior          => chart.TPSL_Behavior,
+         Should_Screen_ATR      => chart.Should_Screen_ATR,
+         Is_Quasi               => is_quasi,
          Should_Roll            => should_roll,
          Num_Digits             => chart.Num_Digits,
          Take_Profit_Multiplier => take_profit_multiplier,
@@ -140,20 +140,6 @@ package body Kernel_Ops is
          return;
       end if;
 
-      if conf.Exit_Behavior = Common.TPSL_Self_Managed
-        and then sr.Final_Total > result.best_scenario_report.Final_Total
-      then
-         --  calculate the ratio
-         ratio :=
-           (if sr.Wins + sr.Losses > 0
-            then Float (sr.Wins) / Float (sr.Wins + sr.Losses)
-            else 0.0);
-         sr.Ratio := ratio;
-         result.best_scenario_report := sr;
-         io.Put_Line (result.best_scenario_report'Image);
-         return;
-      end if;
-
       --  calculate the ratio
       ratio :=
         (if sr.Wins + sr.Losses > 0
@@ -178,18 +164,17 @@ package body Kernel_Ops is
    is
       temp_total_found : Natural := 0;
       result           : Operation_Result;
-
    begin
       --  queue the configs to the solver tasks
       result.total_found := 0;
       for wma_source_key in Common.WMA_Source_Key'Range loop
          for entry_key in Common.Candle_Key'Range loop
             for exit_key in Common.Candle_Key'Range loop
-               for take_profit_multiplier
-                 of Common.Offline_Take_Profit_Multipliers
+               for take_profit_multiplier of
+                 Common.Offline_Take_Profit_Multipliers
                loop
-                  for stop_loss_multiplier
-                    of Common.Offline_Stop_Loss_Multipliers
+                  for stop_loss_multiplier of
+                    Common.Offline_Stop_Loss_Multipliers
                   loop
                      Process_Kernel_Operation
                        (p                      => p,
@@ -217,7 +202,6 @@ package body Kernel_Ops is
    is
       temp_total_found : Natural := 0;
       result           : Operation_Result;
-
    begin
       --  queue the configs to the solver tasks
       result.total_found := 0;
