@@ -1,5 +1,6 @@
 pragma Ada_2022;
 
+with Ada.Calendar;
 with TOML;
 with Ada.Strings.Unbounded;
 use Ada;
@@ -13,7 +14,9 @@ package Config is
       URL        : Unbounded.Unbounded_String;
    end record;
 
-   type Chart_Config is record
+   type Date_List is array (Positive range <>) of Ada.Calendar.Time;
+
+   type Chart_Config (date_count : Positive) is record
       Instrument             : String (1 .. 7);
       Num_Digits             : Positive;
       Granularity            : String (1 .. 2);
@@ -23,6 +26,7 @@ package Config is
       Time_Period_Interval   : Positive;
       TPSL_Behavior          : Common.TPSL_Behavior;
       Should_Screen_ATR      : Boolean;
+      Dates                  : Date_List (1 .. date_count);
    end record
    with
      Dynamic_Predicate =>

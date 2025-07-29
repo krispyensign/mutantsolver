@@ -165,11 +165,11 @@ package body Solver is
       for wma_source_key in Common.WMA_Source_Key'Range loop
          for entry_key in Common.Candle_Key'Range loop
             for exit_key in Common.Candle_Key'Range loop
-               for take_profit_multiplier of
-                 Common.Offline_Take_Profit_Multipliers
+               for take_profit_multiplier
+                 of Common.Offline_Take_Profit_Multipliers
                loop
-                  for stop_loss_multiplier of
-                    Common.Offline_Stop_Loss_Multipliers
+                  for stop_loss_multiplier
+                    of Common.Offline_Stop_Loss_Multipliers
                   loop
                      Process_Kernel_Operation
                        (p                      => p,
@@ -268,9 +268,9 @@ package body Solver is
       package offline_p is new Pools (Count => chart.Offline_Set_Size);
       offline_data_pool : constant Common.Row_Pool :=
         offline_p.Make_Row_Pool
-          ([for i in Common.Pool_Key'Range =>
-              offline_p.Swim_Lane
-                (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
+          ([for i in Common.Pool_Key'Range
+            => offline_p.Swim_Lane
+                 (full_data_pool (i) (1 .. chart.Offline_Set_Size))]);
 
       --  tp_sl_offline_data_pool is a pool that contains a copied slice of the
       --  offline candles that will be used for solving for optimized take
@@ -281,13 +281,11 @@ package body Solver is
         Pools (Count => chart.TP_SL_Offline_Set_Size);
       tp_sl_offline_data_pool : constant Common.Row_Pool :=
         tp_sl_offline_p.Make_Row_Pool
-          ([for key in Common.Pool_Key'Range =>
-              tp_sl_offline_p.Swim_Lane
-                (full_data_pool (key)
-                   (chart.Offline_Set_Size
-                    - chart.TP_SL_Offline_Set_Size
-                    + 1
-                    .. chart.Offline_Set_Size))]);
+          ([for key in Common.Pool_Key'Range
+            => tp_sl_offline_p.Swim_Lane
+                 (full_data_pool (key)
+                    (chart.Offline_Set_Size - chart.TP_SL_Offline_Set_Size + 1
+                     .. chart.Offline_Set_Size))]);
 
       --  online_data_pool is a pool that contains the online candles that
       --  will not be solved for and are only used for zero knowledge
@@ -296,9 +294,9 @@ package body Solver is
       package online_p is new Pools (Count => chart.Online_Set_Size);
       online_data_pool : constant Common.Row_Pool :=
         online_p.Make_Row_Pool
-          ([for i in Common.Pool_Key'Range =>
-              online_p.Swim_Lane
-                (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
+          ([for i in Common.Pool_Key'Range
+            => online_p.Swim_Lane
+                 (full_data_pool (i) (chart.Offline_Set_Size + 1 .. count))]);
 
       --  performance metrics
       start_time          : Ada.Real_Time.Time;

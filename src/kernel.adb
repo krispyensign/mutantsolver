@@ -15,6 +15,7 @@ package body Kernel is
       res.Stop_Loss_Price := 0.0;
       res.Position := 0.0;
       res.Exit_Value := 0.0;
+      res.Entry_ATR := 0.0;
       res.Exit_Total := reference_res.Exit_Total;
       res.Running_Total := reference_res.Running_Total;
       res.Crosses := reference_res.Crosses;
@@ -31,6 +32,7 @@ package body Kernel is
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class) is
    begin
       res.Entry_Price := last_res.Entry_Price;
+      res.Entry_ATR := last_res.Entry_ATR;
       res.Take_Profit_Price := last_res.Take_Profit_Price;
       res.Stop_Loss_Price := last_res.Stop_Loss_Price;
       pragma Assert (res.Entry_Price /= 0.0);
@@ -130,22 +132,27 @@ package body Kernel is
       conf : Scenario_Config)
    is
       tp_value       : constant Long_Float :=
-        Long_Float (conf.Take_Profit_Multiplier) * curr (Common.ATR);
+        Long_Float (conf.Take_Profit_Multiplier) * res.Entry_ATR;
       sl_value       : constant Long_Float :=
-        Long_Float (-conf.Stop_Loss_Multiplier) * curr (Common.ATR);
+        Long_Float (-conf.Stop_Loss_Multiplier) * res.Entry_ATR;
       bid_exit_price : constant Long_Float :=
         (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
       position       : constant Long_Float := bid_exit_price - res.Entry_Price;
    begin
+      res.Take_Profit_Price := res.Entry_Price + tp_value;
+      res.Stop_Loss_Price := res.Entry_Price + sl_value;
+
       if conf.Stop_Loss_Multiplier /= 0.0 and then position < sl_value then
          res.Trigger_Stop_Loss;
          res.Exit_Price := bid_exit_price;
+
       elsif conf.Take_Profit_Multiplier /= 0.0 and then position > tp_value
       then
          res.Trigger_Take_Profit;
          res.Exit_Price := bid_exit_price;
       end if;
+
    end Process_Self_Managed_Exits;
 
    procedure Process_Broker_Managed_Exits
@@ -274,8 +281,8 @@ package body Kernel is
         (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
 
-      res      : Kernel_Element := results (index);
-      last_res : Kernel_Element := results (index - 1);
+      res           : Kernel_Element := results (index);
+      last_res      : Kernel_Element := results (index - 1);
       last_last_res : constant Kernel_Element := results (index - 2);
 
    begin
@@ -319,6 +326,7 @@ package body Kernel is
       elsif res.Trigger = 1 and then res.Signal = 1 then
          --  pin the entry to the ask close at this tick
          res.Entry_Price := curr (Common.Ask_Close);
+         res.Entry_ATR := curr (Common.ATR);
          res.Entries := res.Entries + 1;
 
          --  pin the tp/sl prices if not self managed

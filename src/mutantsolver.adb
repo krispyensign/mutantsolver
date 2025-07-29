@@ -20,19 +20,18 @@ procedure Mutantsolver is
    count       : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
 
-   --  fetch the candles
-   ex_candles : constant Core.Candles (1 .. count) :=
-     Oanda_Exchange.Fetch_Candles (oanda, chart);
+   ex_candles : Core.Candles (1 .. count);
 
    result : Solver.Offline_Solve_Result;
 
 begin
-
+   --  fetch the candles
+   ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart);
    result := Solver.Offline_Solve (ex_candles => ex_candles, chart => chart);
 
    io.Put_Line ("Done!");
 
-   --  print the configs
+   --  print the results
    io.Put_Line
      ("ins: "
       & chart.Instrument
@@ -47,4 +46,9 @@ begin
       & result.ZK_Refined_Online_Result.Exit_Total'Image
       & " et:"
       & result.Best_Scenario_Result.Exit_Total'Image);
+   io.Put_Line
+     ("duration:"
+      & result.Total_Time_Duration'Image
+      & " throughput: "
+      & result.Throughput'Image);
 end Mutantsolver;

@@ -9,6 +9,7 @@ package Kernel is
       Signal            : Core.Signal_T := 0;
       Trigger           : Core.Trigger_T := 0;
       Entry_Price       : Long_Float := 0.0;
+      Entry_ATR         : Long_Float := 0.0;
       Exit_Price        : Long_Float := 0.0;
       Position          : Long_Float := 0.0;
       Take_Profit_Price : Long_Float := 0.0;
