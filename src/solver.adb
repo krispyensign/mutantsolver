@@ -55,9 +55,9 @@ package body Solver is
 
       --  log progress
       result.Total_Count := result.Total_Count + 1;
-      if result.Total_Count mod 100000 = 0 then
-         io.Put_Line (result.Total_Count'Image);
-      end if;
+      --  if result.Total_Count mod 100000 = 0 then
+      --     io.Put_Line (result.Total_Count'Image);
+      --  end if;
 
       --  determine quasi and if we should roll
       is_quasi := Is_In_Quasi_Keys (exit_key);
@@ -117,9 +117,10 @@ package body Solver is
          result.Best_Scenario_Ratio := ratio;
          result.Best_Scenario_Result := sr;
          result.Best_Scenario_Config := conf;
-         io.Put_Line (result.Best_Scenario_Config'Image);
-         io.Put_Line (result.Best_Scenario_Result'Image);
-         io.Put_Line (result.Best_Scenario_Ratio'Image);
+         --  io.Put_Line (result.Best_Scenario_Config'Image);
+         --  io.Put_Line (result.Best_Scenario_Result'Image);
+         --  io.Put_Line (result.Best_Scenario_Ratio'Image);
+
       end if;
 
       if sr.Exit_Total <= 0.0 then
@@ -147,9 +148,10 @@ package body Solver is
          result.Best_Scenario_Result := sr;
          result.Best_Scenario_Ratio := ratio;
          result.Best_Scenario_Config := conf;
-         io.Put_Line (result.Best_Scenario_Config'Image);
-         io.Put_Line (result.Best_Scenario_Result'Image);
-         io.Put_Line (result.Best_Scenario_Ratio'Image);
+         --  io.Put_Line (result.Best_Scenario_Config'Image);
+         --  io.Put_Line (result.Best_Scenario_Result'Image);
+         --  io.Put_Line (result.Best_Scenario_Ratio'Image);
+
       end if;
 
    end Process_Kernel_Operation;
@@ -373,7 +375,7 @@ package body Solver is
       end_time := Ada.Real_Time.Clock;
       total_time_duration := Ada.Real_Time."-" (end_time, start_time);
 
-      Print_Most_Recent_Candle (chart, online_data_pool);
+      --  Print_Most_Recent_Candle (chart, online_data_pool);
 
       return
         (Best_Scenario_Config     =>
