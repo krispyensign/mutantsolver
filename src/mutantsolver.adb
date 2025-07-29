@@ -21,7 +21,7 @@ procedure Mutantsolver is
    count       : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
 
-   ex_candles : Core.Candles (1 .. count);
+   ex_candles  : Core.Candles (1 .. count);
    last_candle : Core.Candle;
 
    result              : Solver.Offline_Solve_Result;
@@ -40,27 +40,37 @@ begin
       last_candle := ex_candles (count);
       result :=
         Solver.Offline_Solve (ex_candles => ex_candles, chart => chart);
-      final_zk := final_zk + result.ZK_Online_Result.Exit_Total;
-      final_pk := final_pk + result.PK_Online_Result.Exit_Total;
-      final_rzk := final_rzk + result.ZK_Refined_Online_Result.Exit_Total;
 
       --  print the results
       io.Put_Line
-        ("ins: "
+        ("duration:"
+         & result.Total_Time_Duration'Image
+         & " throughput: "
+         & result.Throughput'Image);
+      io.Put_Line
+        ("config ins: "
          & chart.Instrument
          & " satr:"
          & chart.Should_Screen_ATR'Image
          & " tp:"
          & chart.TPSL_Behavior'Image);
       io.Put_Line
-        ("zet:"
+        ("offline rfet:"
+         & result.ZK_Refined_Offline_Result.Exit_Total'Image
+         & " et:"
+         & result.Best_Scenario_Result.Exit_Total'Image);
+      io.Put_Line
+        ("online zet:"
          & result.ZK_Online_Result.Exit_Total'Image
          & " ret:"
          & result.ZK_Refined_Online_Result.Exit_Total'Image
-         & " et:"
-         & result.Best_Scenario_Result.Exit_Total'Image
          & " pet:"
          & result.PK_Online_Result.Exit_Total'Image);
+
+      final_zk := final_zk + result.ZK_Online_Result.Exit_Total;
+      final_pk := final_pk + result.PK_Online_Result.Exit_Total;
+      final_rzk := final_rzk + result.ZK_Refined_Online_Result.Exit_Total;
+
       io.Put_Line
         ("running zet: "
          & final_zk'Image
@@ -68,11 +78,6 @@ begin
          & final_rzk'Image
          & " pet: "
          & final_pk'Image);
-      io.Put_Line
-        ("duration:"
-         & result.Total_Time_Duration'Image
-         & " throughput: "
-         & result.Throughput'Image);
    end loop;
 
    end_time := Ada.Real_Time.Clock;

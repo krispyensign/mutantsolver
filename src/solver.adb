@@ -378,25 +378,29 @@ package body Solver is
       --  Print_Most_Recent_Candle (chart, online_data_pool);
 
       return
-        (Best_Scenario_Config     =>
+        (Best_Scenario_Config      =>
            find_max_offline_result.Best_Scenario_Config,
-         Best_Scenario_Result     =>
+         Best_Scenario_Result      =>
            find_max_offline_result.Best_Scenario_Result,
-         Refined_Config           =>
+         Refined_Config            =>
            find_refined_zk_offline_max_result.Best_Scenario_Config,
-         Refined_Result           =>
+         Refined_Result            =>
            find_refined_zk_offline_max_result.Best_Scenario_Result,
-         ZK_Online_Result         => zk_online_results (chart.Online_Set_Size),
-         ZK_Refined_Online_Result =>
+         ZK_Online_Result          =>
+           zk_online_results (chart.Online_Set_Size),
+         ZK_Refined_Online_Result  =>
            refined_zk_online_results (chart.Online_Set_Size),
-         PK_Online_Result         => pk_online_results (chart.Online_Set_Size),
-         Total_Time_Duration      => total_time_duration,
-         Throughput               =>
+         ZK_Refined_Offline_Result =>
+           find_refined_zk_offline_max_result.Best_Scenario_Result,
+         PK_Online_Result          =>
+           pk_online_results (chart.Online_Set_Size),
+         Total_Time_Duration       => total_time_duration,
+         Throughput                =>
            Float (find_max_offline_result.Total_Count)
            / Float (Ada.Real_Time.To_Duration (total_time_duration)),
-         Total_Count              => find_max_offline_result.Total_Count,
-         Total_Reported           => find_max_offline_result.Total_Reported,
-         Total_Found              => find_max_offline_result.Total_Found);
+         Total_Count               => find_max_offline_result.Total_Count,
+         Total_Reported            => find_max_offline_result.Total_Reported,
+         Total_Found               => find_max_offline_result.Total_Found);
 
    end Offline_Solve;
 

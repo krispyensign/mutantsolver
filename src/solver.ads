@@ -26,18 +26,19 @@ package Solver is
       conf  : Kernel.Scenario_Config) return Operation_Result;
 
    type Offline_Solve_Result is record
-      Best_Scenario_Config     : Kernel.Scenario_Config;
-      Best_Scenario_Result     : Kernel.Kernel_Element;
-      Total_Count              : Natural := 0;
-      Total_Reported           : Natural := 0;
-      Total_Found              : Natural := 0;
-      Refined_Config           : Kernel.Scenario_Config;
-      Refined_Result           : Kernel.Kernel_Element;
-      ZK_Online_Result         : Kernel.Kernel_Element;
-      ZK_Refined_Online_Result : Kernel.Kernel_Element;
-      PK_Online_Result         : Kernel.Kernel_Element;
-      Total_Time_Duration      : Ada.Real_Time.Time_Span;
-      Throughput               : Float := 0.0;
+      Best_Scenario_Config      : Kernel.Scenario_Config;
+      Best_Scenario_Result      : Kernel.Kernel_Element;
+      Total_Count               : Natural := 0;
+      Total_Reported            : Natural := 0;
+      Total_Found               : Natural := 0;
+      Refined_Config            : Kernel.Scenario_Config;
+      Refined_Result            : Kernel.Kernel_Element;
+      ZK_Online_Result          : Kernel.Kernel_Element;
+      ZK_Refined_Online_Result  : Kernel.Kernel_Element;
+      ZK_Refined_Offline_Result : Kernel.Kernel_Element;
+      PK_Online_Result          : Kernel.Kernel_Element;
+      Total_Time_Duration       : Ada.Real_Time.Time_Span;
+      Throughput                : Float := 0.0;
    end record;
 
    function Offline_Solve

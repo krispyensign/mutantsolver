@@ -15,7 +15,6 @@ package body Kernel is
       res.Stop_Loss_Price := 0.0;
       res.Position := 0.0;
       res.Exit_Value := 0.0;
-      res.Entry_ATR := 0.0;
       res.Exit_Total := reference_res.Exit_Total;
       res.Running_Total := reference_res.Running_Total;
       res.Crosses := reference_res.Crosses;
@@ -32,7 +31,6 @@ package body Kernel is
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class) is
    begin
       res.Entry_Price := last_res.Entry_Price;
-      res.Entry_ATR := last_res.Entry_ATR;
       res.Take_Profit_Price := last_res.Take_Profit_Price;
       res.Stop_Loss_Price := last_res.Stop_Loss_Price;
       pragma Assert (res.Entry_Price /= 0.0);
@@ -132,9 +130,9 @@ package body Kernel is
       conf : Scenario_Config)
    is
       tp_value       : constant Long_Float :=
-        Long_Float (conf.Take_Profit_Multiplier) * res.Entry_ATR;
+        Long_Float (conf.Take_Profit_Multiplier) * curr (Common.ATR);
       sl_value       : constant Long_Float :=
-        Long_Float (-conf.Stop_Loss_Multiplier) * res.Entry_ATR;
+        Long_Float (-conf.Stop_Loss_Multiplier) * curr (Common.ATR);
       bid_exit_price : constant Long_Float :=
         (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
@@ -166,12 +164,14 @@ package body Kernel is
       --  recorded
       if conf.Is_Quasi then
          if conf.Stop_Loss_Multiplier /= 0.0
+           and then last_res.Trigger /= 1
            and then (last_res.Stop_Loss_Price > prev (Common.Bid_Low)
                      or else res.Stop_Loss_Price > curr (Common.Bid_Open))
          then
             res.Trigger_Stop_Loss;
             res.Exit_Price := res.Stop_Loss_Price;
          elsif conf.Take_Profit_Multiplier /= 0.0
+           and then last_res.Trigger /= 1
            and then (last_res.Take_Profit_Price < prev (Common.Bid_High)
                      or else res.Take_Profit_Price < curr (Common.Bid_Open))
          then
@@ -326,7 +326,6 @@ package body Kernel is
       elsif res.Trigger = 1 and then res.Signal = 1 then
          --  pin the entry to the ask close at this tick
          res.Entry_Price := curr (Common.Ask_Close);
-         res.Entry_ATR := curr (Common.ATR);
          res.Entries := res.Entries + 1;
 
          --  pin the tp/sl prices if not self managed
@@ -337,8 +336,8 @@ package body Kernel is
 
          --  if volatilty is not acceptable then do not enter a trade
          if conf.Should_Screen_ATR
-           and then curr (Common.Bid_Close) - curr (Common.Ask_Close)
-                    < -Long_Float (conf.Stop_Loss_Multiplier)
+           and then curr (Common.Ask_Close) - curr (Common.Bid_Close)
+                    > Long_Float (conf.Stop_Loss_Multiplier)
                       * curr (Common.ATR)
          then
             res.Reset (last_res);
@@ -375,13 +374,6 @@ package body Kernel is
          res.Process_Broker_Managed_Exits (last_res, prev, curr, conf);
       end if;
 
-      --  the default behavior is to pin the tp/sl and not modify them
-      --  if dynamic then recalculate
-      if conf.Exit_Behavior = Common.TPSL_Dynamic then
-         res.Pin_TPSL_Prices
-           (last_res => last_res, curr => curr, conf => conf);
-      end if;
-
       --  update the exit value and totals or positions
       if res.Trigger = -1 then
          res.Update_Exit_Totals;
@@ -389,6 +381,12 @@ package body Kernel is
          res.Update_Min_Max_Totals (last_res);
       else
          res.Update_Position (bid_exit_price, curr (Common.Ask_Close));
+         --  the default behavior is to pin the tp/sl and not modify them
+         --  if dynamic then recalculate
+         if conf.Exit_Behavior = Common.TPSL_Dynamic then
+            res.Pin_TPSL_Prices
+              (last_res => last_res, curr => curr, conf => conf);
+         end if;
       end if;
 
       results (index) := res;
