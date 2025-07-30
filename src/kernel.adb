@@ -272,13 +272,10 @@ package body Kernel is
            conf.WMA_Source_Key,
            last_res);
 
-      --  prepare the result with the previous result totals
-      res.Carry_Over_Totals (last_res);
-
+      --  if quasi and the previous candle is an open and this candle
+      --  is a close then erase and bail
       if res.Trigger = -1 and then last_res.Trigger = 1 and then conf.Is_Quasi
       then
-         --  if quasi and the previous candle is an open and this candle
-         --  is a close then erase and bail
          last_res.Reset (last_last_res);
          res.Reset (last_res);
          results (index) := res;
@@ -286,6 +283,9 @@ package body Kernel is
 
          return;
       end if;
+
+      --  prepare the result with the previous result totals
+      res.Carry_Over_Totals (last_res);
 
       --  trigger, signal, notes
       --   0, 0, nothing
