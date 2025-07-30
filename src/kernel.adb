@@ -302,11 +302,8 @@ package body Kernel is
          res.Entry_Price := curr (Common.Ask_Close);
          res.Entries := res.Entries + 1;
 
-         --  pin the tp/sl prices if not self managed
-         if conf.Exit_Behavior /= Common.TPSL_Self_Managed then
-            res.Calc_TPSL_Prices
-              (last_res => last_res, curr => curr, conf => conf);
-         end if;
+         res.Calc_TPSL_Prices
+           (last_res => last_res, curr => curr, conf => conf);
 
          --  if volatilty is not acceptable then do not enter a trade
          if conf.Should_Screen_ATR
@@ -331,7 +328,10 @@ package body Kernel is
       --  get ready to exit
       res.Carry_Over_Prices (last_res);
 
-      --  ensure that the state machine is valid
+      --  ensure that the state machine is valid only allowed states at this
+      --  point are:
+      --  signal = 1 trigger = 0
+      --  signal = 0 trigger = -1
       pragma
         Assert
           (last_res.Signal = 1
@@ -339,11 +339,8 @@ package body Kernel is
                        or else (res.Trigger = 0 and then res.Signal = 1)));
       pragma Assert (res.Entries > 0);
       pragma Assert (res.Entry_Price /= 0.0);
-      --  only allowed states at this point are:
-      --  signal = 1 trigger = 0
-      --  signal = 0 trigger = -1
 
-      --  process TPSL exits unless quasi already exited
+      --  process TPSL exits unless it is quasi and already exited
       --  if is quasi and trigger = 0 then true
       --  if not quasi then true
       if (conf.Is_Quasi and then res.Trigger = 0) or else not conf.Is_Quasi
@@ -358,8 +355,9 @@ package body Kernel is
          res.Update_Min_Max_Totals (last_res);
       else
          res.Update_Position (bid_exit_price, curr (Common.Ask_Close));
-         --  if dynamic then recalculate tpsl
-         if conf.Exit_Behavior = Common.TPSL_Dynamic then
+
+         --  if not default then recalculate tpsl
+         if conf.Exit_Behavior /= Common.TPSL_Default then
             res.Calc_TPSL_Prices
               (last_res => last_res, curr => curr, conf => conf);
          end if;
