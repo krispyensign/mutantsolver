@@ -8,6 +8,7 @@ with Core;
 with Solver;
 with Ada.Text_IO;
 with Ada.Real_Time;
+with Ada.Calendar.Formatting;
 
 procedure Mutantsolver is
    package io renames Ada.Text_IO;
@@ -21,8 +22,7 @@ procedure Mutantsolver is
    count       : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
 
-   ex_candles  : Core.Candles (1 .. count);
-   last_candle : Core.Candle;
+   ex_candles : Core.Candles (1 .. count);
 
    result              : Solver.Offline_Solve_Result;
    final_zk            : Long_Float := 0.0;
@@ -37,7 +37,14 @@ begin
    --  fetch the candles
    for i in chart.Dates'Range loop
       ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart, i);
-      last_candle := ex_candles (count);
+      io.Put_Line
+        ("t1:"
+         & Ada.Calendar.Formatting.Local_Image (ex_candles (1).Time)
+         & " t2:"
+         & Ada.Calendar.Formatting.Local_Image
+             (ex_candles (chart.Offline_Set_Size).Time)
+         & " t3:"
+         & Ada.Calendar.Formatting.Local_Image (ex_candles (count).Time));
       result :=
         Solver.Offline_Solve (ex_candles => ex_candles, chart => chart);
 
