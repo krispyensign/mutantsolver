@@ -79,11 +79,11 @@ begin
       final_rzk := final_rzk + result.ZK_Refined_Online_Result.Exit_Total;
 
       io.Put_Line
-        ("running zet: "
+        ("running zet:"
          & final_zk'Image
          & " ret:"
          & final_rzk'Image
-         & " pet: "
+         & " pet:"
          & final_pk'Image);
    end loop;
 
