@@ -16,7 +16,15 @@ package body Kernel is
       res.Position := 0.0;
       res.Exit_Value := 0.0;
       res.Exit_Total := reference_res.Exit_Total;
-      res.Running_Total := reference_res.Exit_Total;
+      res.Running_Total := reference_res.Running_Total;
+      res.Crosses := reference_res.Crosses;
+      res.Entries := reference_res.Entries;
+      res.Wins := reference_res.Wins;
+      res.Losses := reference_res.Losses;
+      res.Stop_Losses := reference_res.Stop_Losses;
+      res.Take_Profits := reference_res.Take_Profits;
+      res.Min_Exit_Total := reference_res.Min_Exit_Total;
+      res.Max_Exit_Total := reference_res.Max_Exit_Total;
    end Reset;
 
    procedure Carry_Over_Prices
@@ -32,6 +40,7 @@ package body Kernel is
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class) is
    begin
       res.Exit_Total := last_res.Exit_Total;
+      res.Running_Total := last_res.Running_Total;
       res.Min_Exit_Total := last_res.Min_Exit_Total;
       res.Max_Exit_Total := last_res.Max_Exit_Total;
       res.Wins := last_res.Wins;
@@ -42,7 +51,7 @@ package body Kernel is
       res.Crosses := last_res.Crosses;
    end Carry_Over_Totals;
 
-   procedure Pin_TPSL_Prices
+   procedure Calc_TPSL_Prices
      (res      : in out Kernel_Element'Class;
       last_res : Kernel_Element'Class;
       curr     : Common.Keyed_Lane;
@@ -99,7 +108,7 @@ package body Kernel is
         Assert
           (conf.Stop_Loss_Multiplier = 0.0
              or else res.Entry_Price >= res.Stop_Loss_Price);
-   end Pin_TPSL_Prices;
+   end Calc_TPSL_Prices;
 
    procedure Trigger_Stop_Loss (res : in out Kernel_Element'Class) is
    begin
@@ -115,67 +124,48 @@ package body Kernel is
       res.Take_Profits := res.Take_Profits + 1;
    end Trigger_Take_Profit;
 
-   procedure Process_Self_Managed_Exits
+   procedure Process_TPSL_Exits
      (res  : in out Kernel_Element'Class;
       curr : Common.Keyed_Lane;
-      conf : Scenario_Config)
+      conf : Scenario_Config'Class)
    is
-      tp_value       : constant Long_Float :=
-        Long_Float (conf.Take_Profit_Multiplier) * curr (Common.ATR);
-      sl_value       : constant Long_Float :=
-        Long_Float (-conf.Stop_Loss_Multiplier) * curr (Common.ATR);
-      bid_exit_price : constant Long_Float :=
-        (if conf.Is_Quasi then curr (Common.Bid_Open)
-         else curr (Common.Bid_Close));
-      position       : constant Long_Float := bid_exit_price - res.Exit_Price;
+      tp_threshold : Long_Float;
+      tp_price     : Long_Float;
+      sl_threshold : Long_Float;
+      sl_price     : Long_Float;
    begin
-      if conf.Stop_Loss_Multiplier /= 0.0 and then position < sl_value then
+      if conf.Is_Quasi and then conf.Exit_Behavior = Common.TPSL_Self_Managed
+      then
+         tp_threshold := curr (Common.Bid_Open);
+         tp_price := curr (Common.Bid_Open);
+         sl_threshold := curr (Common.Bid_Open);
+         sl_price := curr (Common.Bid_Open);
+      elsif not conf.Is_Quasi
+        and then conf.Exit_Behavior = Common.TPSL_Self_Managed
+      then
+         tp_threshold := curr (Common.Bid_Close);
+         tp_price := curr (Common.Bid_Close);
+         sl_threshold := curr (Common.Bid_Close);
+         sl_price := curr (Common.Bid_Close);
+      else
+         tp_threshold := curr (Common.Bid_High);
+         tp_price := res.Take_Profit_Price;
+         sl_threshold := curr (Common.Bid_Low);
+         sl_price := res.Stop_Loss_Price;
+      end if;
+
+      if conf.Stop_Loss_Multiplier /= 0.0
+        and then res.Stop_Loss_Price > sl_threshold
+      then
          res.Trigger_Stop_Loss;
-         res.Exit_Price := bid_exit_price;
-      elsif conf.Take_Profit_Multiplier /= 0.0 and then position > tp_value
+         res.Exit_Price := sl_price;
+      elsif conf.Take_Profit_Multiplier /= 0.0
+        and then res.Take_Profit_Price < tp_threshold
       then
          res.Trigger_Take_Profit;
-         res.Exit_Price := bid_exit_price;
+         res.Exit_Price := tp_price;
       end if;
-   end Process_Self_Managed_Exits;
-
-   procedure Process_Broker_Managed_Exits
-     (res      : in out Kernel_Element'Class;
-      last_res : Kernel_Element'Class;
-      prev     : Common.Keyed_Lane;
-      curr     : Common.Keyed_Lane;
-      conf     : Scenario_Config'Class) is
-   begin
-      --  if quasi then the exit already happened and its just being
-      --  recorded
-      if conf.Is_Quasi then
-         if conf.Stop_Loss_Multiplier /= 0.0
-           and then (last_res.Stop_Loss_Price > prev (Common.Bid_Low)
-                     or else res.Stop_Loss_Price > curr (Common.Bid_Open))
-         then
-            res.Trigger_Stop_Loss;
-            res.Exit_Price := res.Stop_Loss_Price;
-         elsif conf.Take_Profit_Multiplier /= 0.0
-           and then (last_res.Take_Profit_Price < prev (Common.Bid_High)
-                     or else res.Take_Profit_Price < curr (Common.Bid_Open))
-         then
-            res.Trigger_Take_Profit;
-            res.Exit_Price := res.Take_Profit_Price;
-         end if;
-      else
-         if conf.Stop_Loss_Multiplier /= 0.0
-           and then res.Stop_Loss_Price > curr (Common.Bid_Low)
-         then
-            res.Trigger_Stop_Loss;
-            res.Exit_Price := res.Stop_Loss_Price;
-         elsif conf.Take_Profit_Multiplier /= 0.0
-           and then res.Take_Profit_Price < curr (Common.Bid_High)
-         then
-            res.Trigger_Take_Profit;
-            res.Exit_Price := res.Take_Profit_Price;
-         end if;
-      end if;
-   end Process_Broker_Managed_Exits;
+   end Process_TPSL_Exits;
 
    procedure Update_Min_Max_Totals
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class) is
@@ -265,8 +255,9 @@ package body Kernel is
         (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
 
-      res      : Kernel_Element := results (index);
-      last_res : Kernel_Element := results (index - 1);
+      res           : Kernel_Element := results (index);
+      last_res      : Kernel_Element := results (index - 1);
+      last_last_res : constant Kernel_Element := results (index - 2);
 
    begin
       --  calculate the wma signal
@@ -281,20 +272,20 @@ package body Kernel is
            conf.WMA_Source_Key,
            last_res);
 
-      --  prepare the result with the previous result totals
-      res.Carry_Over_Totals (last_res);
-
+      --  if quasi and the previous candle is an open and this candle
+      --  is a close then erase and bail
       if res.Trigger = -1 and then last_res.Trigger = 1 and then conf.Is_Quasi
       then
-         --  if quasi and the previous candle is an open and this candle
-         --  is a close then erase and bail
+         last_res.Reset (last_last_res);
          res.Reset (last_res);
-         last_res.Reset (last_res);
          results (index) := res;
          results (index - 1) := last_res;
 
          return;
       end if;
+
+      --  prepare the result with the previous result totals
+      res.Carry_Over_Totals (last_res);
 
       --  trigger, signal, notes
       --   0, 0, nothing
@@ -311,22 +302,16 @@ package body Kernel is
          res.Entry_Price := curr (Common.Ask_Close);
          res.Entries := res.Entries + 1;
 
-         -- pin the tp/sl prices if not self managed
-         if conf.Exit_Behavior /= Common.TPSL_Self_Managed then
-            res.Pin_TPSL_Prices
-              (last_res => last_res, curr => curr, conf => conf);
-         end if;
+         res.Calc_TPSL_Prices
+           (last_res => last_res, curr => curr, conf => conf);
 
          --  if volatilty is not acceptable then do not enter a trade
-         if conf.Exit_Behavior = Common.TPSL_Self_Managed
-           and then curr (Common.Bid_Close) - curr (Common.Ask_Close)
-                    < -Long_Float (conf.Stop_Loss_Multiplier)
+         if conf.Should_Screen_ATR
+           and then curr (Common.Ask_Close) - curr (Common.Bid_Close)
+                    > Long_Float (conf.Stop_Loss_Multiplier)
                       * curr (Common.ATR)
          then
-            res.Trigger := 0;
-            res.Signal := 0;
-            res.Entries := res.Entries - 1;
-            res.Entry_Price := 0.0;
+            res.Reset (last_res);
          end if;
 
          results (index) := res;
@@ -339,32 +324,28 @@ package body Kernel is
 
       end if;
 
-      --  ensure that the state machine is valid
+      --  carry over the prices to continue current open position and or
+      --  get ready to exit
+      res.Carry_Over_Prices (last_res);
+
+      --  ensure that the state machine is valid only allowed states at this
+      --  point are:
+      --  signal = 1 trigger = 0
+      --  signal = 0 trigger = -1
       pragma
         Assert
           (last_res.Signal = 1
              and then ((res.Trigger = -1 and then res.Signal = 0)
                        or else (res.Trigger = 0 and then res.Signal = 1)));
       pragma Assert (res.Entries > 0);
-
-      --  carry over the prices to continue current open position and or
-      --  get ready to exit
-      res.Carry_Over_Prices (last_res);
       pragma Assert (res.Entry_Price /= 0.0);
 
-      --  if the exit behavior is not self managed then it is broker managed
-      --  and the tp/sl is set on the order
-      if conf.Exit_Behavior = Common.TPSL_Self_Managed then
-         res.Process_Self_Managed_Exits (curr, conf);
-      else
-         res.Process_Broker_Managed_Exits (last_res, prev, curr, conf);
-      end if;
-
-      --  the default behavior is to pin the tp/sl and not modify them
-      --  if dynamic then recalculate
-      if conf.Exit_Behavior = Common.TPSL_Dynamic then
-         res.Pin_TPSL_Prices
-           (last_res => last_res, curr => curr, conf => conf);
+      --  process TPSL exits unless it is quasi and already exited
+      --  if is quasi and trigger = 0 then true
+      --  if not quasi then true
+      if (conf.Is_Quasi and then res.Trigger = 0) or else not conf.Is_Quasi
+      then
+         res.Process_TPSL_Exits (curr, conf);
       end if;
 
       --  update the exit value and totals or positions
@@ -374,6 +355,12 @@ package body Kernel is
          res.Update_Min_Max_Totals (last_res);
       else
          res.Update_Position (bid_exit_price, curr (Common.Ask_Close));
+
+         --  if not default then recalculate tpsl
+         if conf.Exit_Behavior /= Common.TPSL_Default then
+            res.Calc_TPSL_Prices
+              (last_res => last_res, curr => curr, conf => conf);
+         end if;
       end if;
 
       results (index) := res;

@@ -1,5 +1,6 @@
 with Ada.Text_IO;
 with Ada.Strings;
+with Util.Dates.ISO8601;
 
 package body Config is
 
@@ -27,11 +28,25 @@ package body Config is
 
    function Load_Chart_Config (Result : TOML.Read_Result) return Chart_Config
    is
-      Chart_Root : constant TOML.TOML_Value := Result.Value.Get ("chart");
+      Chart_Root      : constant TOML.TOML_Value := Result.Value.Get ("chart");
+      has_dates       : constant Boolean := Chart_Root.Has ("dates");
+      date_count      : constant Positive := Chart_Root.Get ("dates").Length;
+      Converted_Dates : Date_List (1 .. date_count);
+      toml_dates      : constant TOML.TOML_Value := Chart_Root.Get ("dates");
    begin
+      if has_dates then
+         for I in 1 .. date_count loop
+            Converted_Dates (I) :=
+              Util.Dates.ISO8601.Value (toml_dates.Item (I).As_String);
+         end loop;
+      end if;
       return
-        (TPSL_Behavior          =>
+        (date_count             => date_count,
+         Dates                  => Converted_Dates,
+         TPSL_Behavior          =>
            Map_TP_SL_Behavior (Chart_Root.Get ("tp_sl_behavior").As_String),
+         Should_Screen_ATR      =>
+           Chart_Root.Get ("should_screen_atr").As_Boolean,
          Time_Period_Interval   =>
            Integer (Chart_Root.Get ("time_period_interval").As_Integer),
          Instrument             => Chart_Root.Get ("instrument").As_String,

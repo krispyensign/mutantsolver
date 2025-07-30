@@ -4,14 +4,14 @@ with Util.Dates.ISO8601;
 with Util.Http.Clients;
 with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
---  with Ada.Calendar.Conversions;
+with Ada.Calendar.Conversions;
 
 package body Oanda_Exchange is
    package ubo renames Ada.Strings.Unbounded;
    package fixed renames Ada.Strings.Fixed;
    package strings renames Ada.Strings;
    package io renames Ada.Text_IO;
-   --  package conversions renames Ada.Calendar.Conversions;
+   package conversions renames Ada.Calendar.Conversions;
 
    function Construct_URL
      (oanda : Config.Oanda_Access; chart : Config.Chart_Config) return String
@@ -30,19 +30,20 @@ package body Oanda_Exchange is
       return constructed_url;
    end Construct_URL;
 
-   --  function Construct_URL
-   --    (oanda     : Config.Oanda_Access;
-   --     chart     : Config.Chart_Config;
-   --     from_time : calendar.Time) return String
-   --  is
-   --     seconds         : constant Long_Long_Integer :=
-   --       Long_Long_Integer (conversions.To_Unix_Time_64 (from_time));
-   --     constructed_url : constant String :=
-   --       Construct_URL (oanda, chart)
-   --       & fixed.Trim (seconds'Image, strings.Both);
-   --  begin
-   --     return constructed_url;
-   --  end Construct_URL;
+   function Construct_URL
+     (oanda   : Config.Oanda_Access;
+      chart   : Config.Chart_Config;
+      to_time : calendar.Time) return String
+   is
+      seconds         : constant Long_Long_Integer :=
+        Long_Long_Integer (conversions.To_Unix_Time_64 (to_time));
+      constructed_url : constant String :=
+        Construct_URL (oanda, chart)
+        & "&to="
+        & fixed.Trim (seconds'Image, strings.Both);
+   begin
+      return constructed_url;
+   end Construct_URL;
 
    function Make_Candle (current_candle : json.JSON_Value) return Core.Candle
    is
@@ -101,14 +102,17 @@ package body Oanda_Exchange is
    end Fetch_Candle_Data;
 
    function Fetch_Candles
-     (oanda : Config.Oanda_Access; chart : Config.Chart_Config)
-      return Core.Candles
+     (oanda      : Config.Oanda_Access;
+      chart      : Config.Chart_Config;
+      date_index : Natural := 0) return Core.Candles
    is
       unmapped_json_array : json.JSON_Array;
       count               : constant Integer :=
         chart.Online_Set_Size + chart.Offline_Set_Size;
       out_candles         : Core.Candles (1 .. count);
-      constructed_url     : constant String := Construct_URL (oanda, chart);
+      constructed_url     : constant String :=
+        (if date_index = 0 then Construct_URL (oanda, chart)
+         else Construct_URL (oanda, chart, chart.Dates (date_index)));
 
    begin
       unmapped_json_array :=

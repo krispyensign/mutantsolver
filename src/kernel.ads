@@ -33,6 +33,7 @@ package Kernel is
       Start_Index            : Positive;
       Is_Quasi               : Boolean := False;
       Should_Roll            : Boolean := False;
+      Should_Screen_ATR      : Boolean := True;
       Num_Digits             : Positive := 5;
       Take_Profit_Multiplier : Float := 0.0;
       Stop_Loss_Multiplier   : Float := 0.0;
@@ -57,7 +58,7 @@ private
      (res : in out Kernel_Element'Class; reference_res : Kernel_Element'Class);
 
    --  pin the prices to the current candle
-   procedure Pin_TPSL_Prices
+   procedure Calc_TPSL_Prices
      (res      : in out Kernel_Element'Class;
       last_res : Kernel_Element'Class;
       curr     : Common.Keyed_Lane;
@@ -71,17 +72,10 @@ private
    procedure Carry_Over_Totals
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
 
-   procedure Process_Self_Managed_Exits
+   procedure Process_TPSL_Exits
      (res  : in out Kernel_Element'Class;
       curr : Common.Keyed_Lane;
-      conf : Scenario_Config);
-
-   procedure Process_Broker_Managed_Exits
-     (res      : in out Kernel_Element'Class;
-      last_res : Kernel_Element'Class;
-      prev     : Common.Keyed_Lane;
-      curr     : Common.Keyed_Lane;
-      conf     : Scenario_Config'Class);
+      conf : Scenario_Config'Class);
 
    --  update the min and max exit totals
    procedure Update_Min_Max_Totals
