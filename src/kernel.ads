@@ -58,7 +58,7 @@ private
      (res : in out Kernel_Element'Class; reference_res : Kernel_Element'Class);
 
    --  pin the prices to the current candle
-   procedure Pin_TPSL_Prices
+   procedure Calc_TPSL_Prices
      (res      : in out Kernel_Element'Class;
       last_res : Kernel_Element'Class;
       curr     : Common.Keyed_Lane;
@@ -72,15 +72,8 @@ private
    procedure Carry_Over_Totals
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
 
-   procedure Process_Self_Managed_Exits
-     (res  : in out Kernel_Element'Class;
-      curr : Common.Keyed_Lane;
-      conf : Scenario_Config);
-
-   procedure Process_Broker_Managed_Exits
+   procedure Process_TPSL_Exits
      (res      : in out Kernel_Element'Class;
-      last_res : Kernel_Element'Class;
-      prev     : Common.Keyed_Lane;
       curr     : Common.Keyed_Lane;
       conf     : Scenario_Config'Class);
 
