@@ -125,9 +125,9 @@ package body Kernel is
    end Trigger_Take_Profit;
 
    procedure Process_TPSL_Exits
-     (res      : in out Kernel_Element'Class;
-      curr     : Common.Keyed_Lane;
-      conf     : Scenario_Config'Class)
+     (res  : in out Kernel_Element'Class;
+      curr : Common.Keyed_Lane;
+      conf : Scenario_Config'Class)
    is
       tp_threshold : Long_Float;
       tp_price     : Long_Float;
@@ -339,9 +339,15 @@ package body Kernel is
                        or else (res.Trigger = 0 and then res.Signal = 1)));
       pragma Assert (res.Entries > 0);
       pragma Assert (res.Entry_Price /= 0.0);
+      --  only allowed states at this point are:
+      --  signal = 1 trigger = 0
+      --  signal = 0 trigger = -1
 
       --  process TPSL exits unless quasi already exited
-      if not (conf.Is_Quasi and then res.Trigger /= 0) then
+      --  if is quasi and trigger = 0 then true
+      --  if not quasi then true
+      if (conf.Is_Quasi and then res.Trigger = 0) or else not conf.Is_Quasi
+      then
          res.Process_TPSL_Exits (curr, conf);
       end if;
 

@@ -73,9 +73,9 @@ private
      (res : in out Kernel_Element'Class; last_res : Kernel_Element'Class);
 
    procedure Process_TPSL_Exits
-     (res      : in out Kernel_Element'Class;
-      curr     : Common.Keyed_Lane;
-      conf     : Scenario_Config'Class);
+     (res  : in out Kernel_Element'Class;
+      curr : Common.Keyed_Lane;
+      conf : Scenario_Config'Class);
 
    --  update the min and max exit totals
    procedure Update_Min_Max_Totals
