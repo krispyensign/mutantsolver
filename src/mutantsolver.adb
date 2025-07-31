@@ -40,16 +40,20 @@ procedure Mutantsolver is
 
 begin
    for Next in 1 .. cmd.Argument_Count loop
+      --  configure the instrument
       if cmd.Argument (Next) = "--instrument" then
          chart.Instrument := cmd.Argument (Next + 1);
       end if;
 
+      --  configure a one off date
       if cmd.Argument (Next) = "--date" then
          chart.Dates := [Util.Dates.ISO8601.Value (cmd.Argument (Next + 1))];
       end if;
    end loop;
 
+   --  start the main loop timer
    start_time := Ada.Real_Time.Clock;
+
    --  fetch the candles
    for i in chart.Dates'Range loop
       ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart, sys_conf, i);
