@@ -79,35 +79,32 @@ package body Oanda_Exchange is
    function Fetch_Candle_Data
      (token : String; constructed_url : String) return String is
    begin
-      --  fetch the candles
+      pragma Extensions_Allowed (On);
+
       Util.Http.Clients.Curl.Register;
-      declare
-         http     : Util.Http.Clients.Client;
-         response : Util.Http.Clients.Response;
-         count    : Natural := 1;
+      http : Util.Http.Clients.Client;
+      response : Util.Http.Clients.Response;
+      count : Natural := 1;
 
-      begin
+      loop
          --  setup headers
-         loop
-            http.Add_Header ("Content-Type", "application/json");
-            http.Add_Header ("Authorization", "Bearer " & token);
-            --  io.Put_Line (token);
-            http.Get (constructed_url, response);
-            if response.Get_Status = 200 then
-               exit;
-            end if;
+         http.Add_Header ("Content-Type", "application/json");
+         http.Add_Header ("Authorization", "Bearer " & token);
+         http.Get (constructed_url, response);
+         if response.Get_Status = 200 then
+            exit;
+         end if;
 
-            io.Put_Line (response.Get_Body);
-            io.Put_Line (constructed_url);
-            io.Put_Line ("error retrieving candles");
-            count := count + 1;
-            if count > 4 then
-               raise Program_Error;
-            end if;
-         end loop;
+         io.Put_Line (response.Get_Body);
+         io.Put_Line (constructed_url);
+         io.Put_Line ("error retrieving candles");
+         count := count + 1;
+         if count > 4 then
+            raise Program_Error;
+         end if;
+      end loop;
 
-         return response.Get_Body;
-      end;
+      return response.Get_Body;
    end Fetch_Candle_Data;
 
    function Fetch_Candles
@@ -116,6 +113,7 @@ package body Oanda_Exchange is
       sys_conf   : Config.System_Config;
       date_index : Natural := 0) return Core.Candles
    is
+      pragma Extensions_Allowed (On);
       unmapped_json_array : json.JSON_Array;
       count               : constant Integer :=
         chart.Online_Set_Size + chart.Offline_Set_Size;
@@ -124,13 +122,11 @@ package body Oanda_Exchange is
         (if date_index = 0 then Construct_URL (oanda, chart)
          else Construct_URL (oanda, chart, chart.Dates (date_index)));
       hashed_file_name    : ubo.Unbounded_String;
-      file_exists         : Boolean;
       root_json           : json.JSON_Value;
-      res                 : json.Read_Result;
-      file_handle         : io.File_Type;
 
    begin
       --  check if a date was specified and if the file exists
+      file_exists : Boolean := False;
       if date_index > 0 then
          --  construct the pathname
          hashed_file_name :=
@@ -152,7 +148,8 @@ package body Oanda_Exchange is
 
       if file_exists then
          --  if it exists then read the root json from cache
-         res := json.Read_File (ubo.To_String (hashed_file_name));
+         res : constant json.Read_Result :=
+           json.Read_File (ubo.To_String (hashed_file_name));
          if res.Success then
             root_json := res.Value;
             io.Put_Line ("cache hit.");
@@ -170,6 +167,7 @@ package body Oanda_Exchange is
 
          --  if a date was specified then cache the result
          if date_index > 0 then
+            file_handle : io.File_Type;
             io.Create
               (File => file_handle, Name => ubo.To_String (hashed_file_name));
             io.Put (File => file_handle, Item => json.Write (root_json));
