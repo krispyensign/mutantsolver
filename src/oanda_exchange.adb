@@ -1,3 +1,5 @@
+pragma Ada_2022;
+
 with Ada.Text_IO;
 with Ada.Strings.Unbounded;
 with Util.Dates.ISO8601;
@@ -78,19 +80,27 @@ package body Oanda_Exchange is
       declare
          http     : Util.Http.Clients.Client;
          response : Util.Http.Clients.Response;
+         count : Natural := 1;
 
       begin
          --  setup headers
-         http.Add_Header ("Content-Type", "application/json");
-         http.Add_Header ("Authorization", "Bearer " & token);
-         --  io.Put_Line (token);
-         http.Get (constructed_url, response);
-         if response.Get_Status /= 200 then
+         loop
+            http.Add_Header ("Content-Type", "application/json");
+            http.Add_Header ("Authorization", "Bearer " & token);
+            --  io.Put_Line (token);
+            http.Get (constructed_url, response);
+            if response.Get_Status = 200 then
+               exit;
+            end if;
+
             io.Put_Line (response.Get_Body);
             io.Put_Line (constructed_url);
             io.Put_Line ("error retrieving candles");
-            raise Program_Error;
-         end if;
+            count := count + 1;
+            if count > 4 then
+               raise Program_Error;
+            end if;
+         end loop;
 
          return response.Get_Body;
       end;
@@ -118,11 +128,17 @@ package body Oanda_Exchange is
 
    begin
       --  read from cache if the file exists
+      io.Put_Line (constructed_url);
       if file_exists then
          res := json.Read_File (hashed_file_name);
          if res.Success then
             unmapped_json_array := res.Value.Get ("candles");
+         else
+            io.Put_Line (res.Error'Image);
+            raise Program_Error;
          end if;
+         io.Put_Line
+           ("candles cached: " & json.Length (unmapped_json_array)'Image);
 
       else
          root_json :=
@@ -133,13 +149,10 @@ package body Oanda_Exchange is
          io.Put (File => file_handle, Item => json.Write (root_json));
          io.Close (file_handle);
          unmapped_json_array := root_json.Get ("candles");
+         io.Put_Line
+           ("candles retrieved: " & json.Length (unmapped_json_array)'Image);
 
       end if;
-
-      --  log debug info
-      io.Put_Line (constructed_url);
-      io.Put_Line
-        ("candles retrieved: " & json.Length (unmapped_json_array)'Image);
 
       --  map the candles from the raw json array to internal rep
       for i in 1 .. count loop
