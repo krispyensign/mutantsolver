@@ -15,6 +15,8 @@ procedure Mutantsolver is
    --  load the configs from the toml files
    load_result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
+   sys_conf    : constant Config.System_Config :=
+     Config.Load_System (load_result);
    oanda       : constant Config.Oanda_Access :=
      Config.Load_Oanda (load_result);
    chart       : constant Config.Chart_Config :=
@@ -36,7 +38,7 @@ begin
    start_time := Ada.Real_Time.Clock;
    --  fetch the candles
    for i in chart.Dates'Range loop
-      ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart, i);
+      ex_candles := Oanda_Exchange.Fetch_Candles (oanda, chart, sys_conf, i);
       io.Put_Line
         ("t1:"
          & Ada.Calendar.Formatting.Local_Image (ex_candles (1).Time)

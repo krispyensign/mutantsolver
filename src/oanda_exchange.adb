@@ -80,7 +80,7 @@ package body Oanda_Exchange is
       declare
          http     : Util.Http.Clients.Client;
          response : Util.Http.Clients.Response;
-         count : Natural := 1;
+         count    : Natural := 1;
 
       begin
          --  setup headers
@@ -109,6 +109,7 @@ package body Oanda_Exchange is
    function Fetch_Candles
      (oanda      : Config.Oanda_Access;
       chart      : Config.Chart_Config;
+      sys_conf   : Config.System_Config;
       date_index : Natural := 0) return Core.Candles
    is
       unmapped_json_array : json.JSON_Array;
@@ -121,7 +122,8 @@ package body Oanda_Exchange is
       hashed_file_name    : constant String :=
         GNAT.MD5.Digest (constructed_url) & ".json";
       file_exists         : constant Boolean :=
-        Ada.Directories.Exists (hashed_file_name);
+        Ada.Directories.Exists
+          (ubo.To_String (sys_conf.Cache_Dir) & "/" & hashed_file_name);
       root_json           : json.JSON_Value;
       res                 : json.Read_Result;
       file_handle         : io.File_Type;
@@ -133,10 +135,12 @@ package body Oanda_Exchange is
          res := json.Read_File (hashed_file_name);
          if res.Success then
             unmapped_json_array := res.Value.Get ("candles");
+
          else
             io.Put_Line (res.Error'Image);
             raise Program_Error;
          end if;
+
          io.Put_Line
            ("candles cached: " & json.Length (unmapped_json_array)'Image);
 
@@ -148,7 +152,9 @@ package body Oanda_Exchange is
          io.Create (File => file_handle, Name => hashed_file_name);
          io.Put (File => file_handle, Item => json.Write (root_json));
          io.Close (file_handle);
+
          unmapped_json_array := root_json.Get ("candles");
+
          io.Put_Line
            ("candles retrieved: " & json.Length (unmapped_json_array)'Image);
 

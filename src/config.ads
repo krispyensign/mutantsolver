@@ -8,6 +8,10 @@ use Ada.Strings;
 with Common;
 
 package Config is
+   type System_Config is record
+      Cache_Dir : Unbounded.Unbounded_String;
+   end record;
+
    type Oanda_Access is record
       Token      : Unbounded.Unbounded_String;
       Account_ID : Unbounded.Unbounded_String;
@@ -40,6 +44,8 @@ package Config is
                 > Chart_Config.Time_Period_Interval
        and then Chart_Config.TP_SL_Offline_Set_Size
                 < Chart_Config.Offline_Set_Size;
+
+   function Load_System (Result : TOML.Read_Result) return System_Config;
 
    function Load_Oanda (Result : TOML.Read_Result) return Oanda_Access;
 
