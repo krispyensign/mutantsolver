@@ -294,6 +294,9 @@ package body Kernel is
       --  -1, 0, exit strategy -- check for tp/sl and calc more prices
       if res.Trigger = 0 and then res.Signal = 0 then
          --  nothing is happening currently so bail
+         pragma Assert (res.Entry_Price = 0.0);
+         pragma Assert (res.Exit_Price = 0.0);
+         pragma Assert (res.Exit_Value = 0.0);
          results (index) := res;
          return;
 
@@ -345,6 +348,7 @@ package body Kernel is
       --  if not quasi then true
       if (conf.Is_Quasi and then res.Trigger = 0) or else not conf.Is_Quasi
       then
+         pragma Assert (not (conf.Is_Quasi and then res.Trigger /= 0));
          res.Process_TPSL_Exits (curr, conf);
       end if;
 

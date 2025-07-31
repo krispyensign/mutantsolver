@@ -17,6 +17,12 @@ package body Config is
       end if;
    end Map_TP_SL_Behavior;
 
+   function Load_System (Result : TOML.Read_Result) return System_Config is
+      System_Root : constant TOML.TOML_Value := Result.Value.Get ("system");
+   begin
+      return (Cache_Dir => System_Root.Get ("cache_dir").As_Unbounded_String);
+   end Load_System;
+
    function Load_Oanda (Result : TOML.Read_Result) return Oanda_Access is
       Oanda_Root : constant TOML.TOML_Value := Result.Value.Get ("oanda");
    begin
