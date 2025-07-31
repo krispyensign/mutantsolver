@@ -9,13 +9,17 @@ with Ada.Strings.Fixed;
 with Ada.Calendar.Conversions;
 with GNAT.MD5;
 with Ada.Directories;
+with GNAT.OS_Lib;
 
 package body Oanda_Exchange is
    package ubo renames Ada.Strings.Unbounded;
    package fixed renames Ada.Strings.Fixed;
    package strings renames Ada.Strings;
    package io renames Ada.Text_IO;
-   package conversions renames Ada.Calendar.Conversions;
+   package conv renames Ada.Calendar.Conversions;
+   package dir renames Ada.Directories;
+   package os renames GNAT.OS_Lib;
+   package md5 renames GNAT.MD5;
 
    function Construct_URL
      (oanda : Config.Oanda_Access; chart : Config.Chart_Config) return String
@@ -40,7 +44,7 @@ package body Oanda_Exchange is
       to_time : calendar.Time) return String
    is
       seconds         : constant Long_Long_Integer :=
-        Long_Long_Integer (conversions.To_Unix_Time_64 (to_time));
+        Long_Long_Integer (conv.To_Unix_Time_64 (to_time));
       constructed_url : constant String :=
         Construct_URL (oanda, chart)
         & "&to="
@@ -119,46 +123,64 @@ package body Oanda_Exchange is
       constructed_url     : constant String :=
         (if date_index = 0 then Construct_URL (oanda, chart)
          else Construct_URL (oanda, chart, chart.Dates (date_index)));
-      hashed_file_name    : constant String :=
-        GNAT.MD5.Digest (constructed_url) & ".json";
-      file_exists         : constant Boolean :=
-        Ada.Directories.Exists
-          (ubo.To_String (sys_conf.Cache_Dir) & "/" & hashed_file_name);
+      hashed_file_name    : ubo.Unbounded_String;
+      file_exists         : Boolean;
       root_json           : json.JSON_Value;
       res                 : json.Read_Result;
       file_handle         : io.File_Type;
 
    begin
-      --  read from cache if the file exists
-      io.Put_Line (constructed_url);
-      if file_exists then
-         res := json.Read_File (hashed_file_name);
-         if res.Success then
-            unmapped_json_array := res.Value.Get ("candles");
+      --  check if a date was specified and if the file exists
+      if date_index > 0 then
+         --  construct the pathname
+         hashed_file_name :=
+           ubo.To_Unbounded_String
+             (ubo.To_String (sys_conf.Cache_Dir)
+              & os.Directory_Separator
+              & md5.Digest (constructed_url)
+              & ".json");
+         io.Put_Line ("checking for " & ubo.To_String (hashed_file_name));
 
+         --  create the directory if it does not exist
+         if not dir.Exists (ubo.To_String (sys_conf.Cache_Dir)) then
+            dir.Create_Directory (ubo.To_String (sys_conf.Cache_Dir));
+         end if;
+
+         --  check if the file exists
+         file_exists := dir.Exists (ubo.To_String (hashed_file_name));
+      end if;
+
+      if file_exists then
+         --  if it exists then read the root json from cache
+         res := json.Read_File (ubo.To_String (hashed_file_name));
+         if res.Success then
+            root_json := res.Value;
+            io.Put_Line ("cache hit.");
          else
             io.Put_Line (res.Error'Image);
             raise Program_Error;
          end if;
-
-         io.Put_Line
-           ("candles cached: " & json.Length (unmapped_json_array)'Image);
-
       else
+         --  read from Oanda
+         io.Put_Line (constructed_url);
          root_json :=
            json.Read
              (Fetch_Candle_Data
                 (ubo.To_String (oanda.Token), constructed_url));
-         io.Create (File => file_handle, Name => hashed_file_name);
-         io.Put (File => file_handle, Item => json.Write (root_json));
-         io.Close (file_handle);
 
-         unmapped_json_array := root_json.Get ("candles");
-
-         io.Put_Line
-           ("candles retrieved: " & json.Length (unmapped_json_array)'Image);
-
+         --  if a date was specified then cache the result
+         if date_index > 0 then
+            io.Create
+              (File => file_handle, Name => ubo.To_String (hashed_file_name));
+            io.Put (File => file_handle, Item => json.Write (root_json));
+            io.Close (file_handle);
+         end if;
       end if;
+
+      --  get the candles from the root json blob
+      unmapped_json_array := root_json.Get ("candles");
+      io.Put_Line
+        ("candles retrieved:" & json.Length (unmapped_json_array)'Image);
 
       --  map the candles from the raw json array to internal rep
       for i in 1 .. count loop
