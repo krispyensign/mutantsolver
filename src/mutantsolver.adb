@@ -107,8 +107,9 @@ begin
          & final_pk'Image);
    end loop;
 
+   --  log the total time spent
    end_time := Ada.Real_Time.Clock;
    total_time_duration := Ada.Real_Time."-" (end_time, start_time);
-
    io.Put_Line ("total duration:" & total_time_duration'Image);
+
 end Mutantsolver;
