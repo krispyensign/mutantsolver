@@ -1,10 +1,10 @@
 pragma Ada_2022;
 
-with Ada.Text_IO;
+--  with Ada.Text_IO;
 with Pools;
 
 package body Solver is
-   package io renames Ada.Text_IO;
+   --  package io renames Ada.Text_IO;
 
    function Is_In_Quasi_Keys (exit_key : Common.Candle_Key) return Boolean is
    begin
@@ -219,15 +219,6 @@ package body Solver is
       return result;
 
    end Find_Max_TP_SL;
-
-   procedure Print_Most_Recent_Candle
-     (chart : Config.Chart_Config; p : Common.Row_Pool) is
-   begin
-      for k in Common.Pool_Key'Range loop
-         io.Put_Line
-           (k'Image & " =>" & p (chart.Online_Set_Size - 1) (k)'Image);
-      end loop;
-   end Print_Most_Recent_Candle;
 
    function Recover_Results
      (p     : Common.Row_Pool;

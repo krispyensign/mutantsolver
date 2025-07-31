@@ -1,3 +1,5 @@
+pragma Ada_2022;
+
 with Ada.Text_IO;
 with Ada.Strings.Unbounded;
 with Util.Dates.ISO8601;
@@ -5,6 +7,8 @@ with Util.Http.Clients;
 with Util.Http.Clients.Curl;
 with Ada.Strings.Fixed;
 with Ada.Calendar.Conversions;
+with GNAT.MD5;
+with Ada.Directories;
 
 package body Oanda_Exchange is
    package ubo renames Ada.Strings.Unbounded;
@@ -69,35 +73,36 @@ package body Oanda_Exchange is
    end Make_Candle;
 
    function Fetch_Candle_Data
-     (token : String; constructed_url : String) return json.JSON_Array is
+     (token : String; constructed_url : String) return String is
    begin
       --  fetch the candles
       Util.Http.Clients.Curl.Register;
       declare
          http     : Util.Http.Clients.Client;
          response : Util.Http.Clients.Response;
-         candles  : json.JSON_Array;
+         count : Natural := 1;
 
       begin
          --  setup headers
-         http.Add_Header ("Content-Type", "application/json");
-         http.Add_Header ("Authorization", "Bearer " & token);
-         --  io.Put_Line (token);
-         http.Get (constructed_url, response);
-         if response.Get_Status /= 200 then
+         loop
+            http.Add_Header ("Content-Type", "application/json");
+            http.Add_Header ("Authorization", "Bearer " & token);
+            --  io.Put_Line (token);
+            http.Get (constructed_url, response);
+            if response.Get_Status = 200 then
+               exit;
+            end if;
+
             io.Put_Line (response.Get_Body);
             io.Put_Line (constructed_url);
             io.Put_Line ("error retrieving candles");
-            raise Program_Error;
-         end if;
+            count := count + 1;
+            if count > 4 then
+               raise Program_Error;
+            end if;
+         end loop;
 
-         --  print to screen for now what the URL should look like
-         --  io.Put_Line (response.Get_Body);
-         io.Put_Line (constructed_url);
-         candles := json.Read (response.Get_Body).Get ("candles");
-         io.Put_Line ("candles retrieved: " & json.Length (candles)'Image);
-
-         return candles;
+         return response.Get_Body;
       end;
    end Fetch_Candle_Data;
 
@@ -113,10 +118,43 @@ package body Oanda_Exchange is
       constructed_url     : constant String :=
         (if date_index = 0 then Construct_URL (oanda, chart)
          else Construct_URL (oanda, chart, chart.Dates (date_index)));
+      hashed_file_name    : constant String :=
+        GNAT.MD5.Digest (constructed_url) & ".json";
+      file_exists         : constant Boolean :=
+        Ada.Directories.Exists (hashed_file_name);
+      root_json           : json.JSON_Value;
+      res                 : json.Read_Result;
+      file_handle         : io.File_Type;
 
    begin
-      unmapped_json_array :=
-        Fetch_Candle_Data (ubo.To_String (oanda.Token), constructed_url);
+      --  read from cache if the file exists
+      io.Put_Line (constructed_url);
+      if file_exists then
+         res := json.Read_File (hashed_file_name);
+         if res.Success then
+            unmapped_json_array := res.Value.Get ("candles");
+         else
+            io.Put_Line (res.Error'Image);
+            raise Program_Error;
+         end if;
+         io.Put_Line
+           ("candles cached: " & json.Length (unmapped_json_array)'Image);
+
+      else
+         root_json :=
+           json.Read
+             (Fetch_Candle_Data
+                (ubo.To_String (oanda.Token), constructed_url));
+         io.Create (File => file_handle, Name => hashed_file_name);
+         io.Put (File => file_handle, Item => json.Write (root_json));
+         io.Close (file_handle);
+         unmapped_json_array := root_json.Get ("candles");
+         io.Put_Line
+           ("candles retrieved: " & json.Length (unmapped_json_array)'Image);
+
+      end if;
+
+      --  map the candles from the raw json array to internal rep
       for i in 1 .. count loop
          out_candles (i) :=
            Make_Candle (json.Array_Element (unmapped_json_array, i));
