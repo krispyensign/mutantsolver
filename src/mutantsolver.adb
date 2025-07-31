@@ -9,9 +9,12 @@ with Solver;
 with Ada.Text_IO;
 with Ada.Real_Time;
 with Ada.Calendar.Formatting;
+with Ada.Command_Line;
+with Util.Dates.ISO8601;
 
 procedure Mutantsolver is
    package io renames Ada.Text_IO;
+   package cmd renames Ada.Command_Line;
    --  load the configs from the toml files
    load_result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
@@ -19,7 +22,7 @@ procedure Mutantsolver is
      Config.Load_System (load_result);
    oanda       : constant Config.Oanda_Access :=
      Config.Load_Oanda (load_result);
-   chart       : constant Config.Chart_Config :=
+   chart       : Config.Chart_Config :=
      Config.Load_Chart_Config (load_result);
    count       : constant Positive :=
      (chart.Offline_Set_Size + chart.Online_Set_Size);
@@ -35,6 +38,16 @@ procedure Mutantsolver is
    total_time_duration : Ada.Real_Time.Time_Span;
 
 begin
+   for Next in 1 .. cmd.Argument_Count loop
+      if cmd.Argument (Next) = "--instrument" then
+         chart.Instrument := cmd.Argument (Next + 1);
+      end if;
+
+      if cmd.Argument (Next) = "--date" then
+         chart.Dates := [Util.Dates.ISO8601.Value (cmd.Argument (Next + 1))];
+      end if;
+   end loop;
+
    start_time := Ada.Real_Time.Clock;
    --  fetch the candles
    for i in chart.Dates'Range loop
