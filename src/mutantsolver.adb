@@ -15,6 +15,7 @@ with Util.Dates.ISO8601;
 procedure Mutantsolver is
    package io renames Ada.Text_IO;
    package cmd renames Ada.Command_Line;
+
    --  load the configs from the toml files
    load_result : constant TOML.Read_Result :=
      TOML.File_IO.Load_File ("local_config.toml");
