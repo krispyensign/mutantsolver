@@ -56,8 +56,7 @@ procedure Mutantsolver is
         ("t1:"
          & format.Local_Image (ex_candles (1).Time)
          & " t2:"
-         & format.Local_Image
-             (ex_candles (chart.Offline_Set_Size).Time)
+         & format.Local_Image (ex_candles (chart.Offline_Set_Size).Time)
          & " t3:"
          & format.Local_Image
              (ex_candles ((chart.Offline_Set_Size + chart.Online_Set_Size))
@@ -75,10 +74,11 @@ begin
    end loop;
 
    --  load the configs from the toml files
-   load_result : TOML.Read_Result :=
-     TOML.File_IO.Load_File (ubo.To_String (filename));
-   sys_conf : Config.System_Config := Config.Load_System (load_result);
-   oanda : Config.Oanda_Access := Config.Load_Oanda (load_result);
+   load_result : constant TOML.Read_Result :=
+     TOML.File_IO.Load_File (filename.To_String);
+   sys_conf : constant Config.System_Config :=
+     Config.Load_System (load_result);
+   oanda : constant Config.Oanda_Access := Config.Load_Oanda (load_result);
 
    chart : Config.Chart_Config := Config.Load_Chart_Config (load_result);
    count : constant Positive :=
@@ -98,10 +98,10 @@ begin
    end loop;
 
    --  loop through all the dates and sum up the exit totals
-   final_zk  : Long_Float := 0.0;
-   final_pk  : Long_Float := 0.0;
+   final_zk : Long_Float := 0.0;
+   final_pk : Long_Float := 0.0;
    final_rzk : Long_Float := 0.0;
-   start_time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
+   start_time : constant Ada.Real_Time.Time := Ada.Real_Time.Clock;
    for i in chart.Dates'Range loop
       --  fetch the candles
       ex_candles : constant Core.Candles (1 .. count) :=
@@ -109,7 +109,7 @@ begin
       Log_ex_candles (ex_candles, chart);
 
       --  run the solver
-      result : Solver.Offline_Solve_Result :=
+      result : constant Solver.Offline_Solve_Result :=
         Solver.Offline_Solve (ex_candles => ex_candles, chart => chart);
 
       --  print the results
@@ -130,8 +130,8 @@ begin
    end loop;
 
    --  log the total time spent
-   end_time : Ada.Real_Time.Time := Ada.Real_Time.Clock;
-   total_time_duration : Ada.Real_Time.Time_Span :=
+   end_time : constant Ada.Real_Time.Time := Ada.Real_Time.Clock;
+   total_time_duration : constant Ada.Real_Time.Time_Span :=
      Ada.Real_Time."-" (end_time, start_time);
    io.Put_Line ("total duration:" & total_time_duration'Image);
 

@@ -82,12 +82,7 @@ package body Solver is
       --  process the kernel operation
       for i in conf.Start_Index .. p'Length loop
          Kernel.Kernel
-           (curr      => p (i),
-            prev      => p (i - 1),
-            prev_prev => p (i - 2),
-            index     => i,
-            conf      => conf,
-            results   => cur_scen_res);
+           (rpool => p, index => i, conf => conf, results => cur_scen_res);
       end loop;
 
       --  get the last element and prepare the scenario report
@@ -230,12 +225,7 @@ package body Solver is
    begin
       for i in chart.Time_Period_Interval .. count loop
          Kernel.Kernel
-           (curr      => p (i),
-            prev      => p (i - 1),
-            prev_prev => p (i - 2),
-            conf      => conf,
-            index     => i,
-            results   => results);
+           (rpool => p, conf => conf, index => i, results => results);
       end loop;
 
       return results;

@@ -211,15 +211,17 @@ package body Kernel is
    end Update_Position;
 
    function Calc_WMA_Signal
-     (curr           : Common.Keyed_Lane;
-      prev           : Common.Keyed_Lane;
-      prev_prev      : Common.Keyed_Lane;
+     (rpool          : Common.Row_Pool;
+      index          : Integer;
       should_roll    : Boolean;
       entry_key      : Common.Candle_Key;
       exit_key       : Common.Candle_Key;
       wma_source_key : Common.WMA_Source_Key;
       last_res       : Kernel_Element) return Kernel_Element
    is
+      curr             : Common.Keyed_Lane renames rpool (index);
+      prev             : Common.Keyed_Lane renames rpool (index - 1);
+      prev_prev        : Common.Keyed_Lane renames rpool (index - 2);
       curr_wma_source  : constant Long_Float :=
         (if should_roll then prev (wma_source_key) else curr (wma_source_key));
       prev_wma_source  : constant Long_Float :=
@@ -244,28 +246,26 @@ package body Kernel is
    end Calc_WMA_Signal;
 
    procedure Kernel
-     (curr      : Common.Keyed_Lane;
-      prev      : Common.Keyed_Lane;
-      prev_prev : Common.Keyed_Lane;
-      conf      : Scenario_Config;
-      index     : Positive;
-      results   : in out Kernel_Elements)
+     (rpool   : Common.Row_Pool;
+      conf    : Scenario_Config;
+      index   : Positive;
+      results : in out Kernel_Elements)
    is
+      curr          : Common.Keyed_Lane renames rpool (index);
+      res           : Kernel_Element renames results (index);
+      last_res      : Kernel_Element renames results (index - 1);
+      last_last_res : Kernel_Element renames results (index - 2);
+
       bid_exit_price : constant Long_Float :=
         (if conf.Is_Quasi then curr (Common.Bid_Open)
          else curr (Common.Bid_Close));
-
-      res           : Kernel_Element := results (index);
-      last_res      : Kernel_Element := results (index - 1);
-      last_last_res : constant Kernel_Element := results (index - 2);
 
    begin
       --  calculate the wma signal
       res :=
         Calc_WMA_Signal
-          (curr,
-           prev,
-           prev_prev,
+          (rpool,
+           index,
            conf.Should_Roll,
            conf.Entry_Key,
            conf.Exit_Key,
@@ -278,8 +278,6 @@ package body Kernel is
       then
          last_res.Reset (last_last_res);
          res.Reset (last_res);
-         results (index) := res;
-         results (index - 1) := last_res;
 
          return;
       end if;
@@ -297,7 +295,7 @@ package body Kernel is
          pragma Assert (res.Entry_Price = 0.0);
          pragma Assert (res.Exit_Price = 0.0);
          pragma Assert (res.Exit_Value = 0.0);
-         results (index) := res;
+
          return;
 
       elsif res.Trigger = 1 and then res.Signal = 1 then
@@ -317,7 +315,6 @@ package body Kernel is
             res.Reset (last_res);
          end if;
 
-         results (index) := res;
          return;
 
       elsif res.Trigger = -1 and then res.Signal = 0 then
@@ -366,8 +363,6 @@ package body Kernel is
               (last_res => last_res, curr => curr, conf => conf);
          end if;
       end if;
-
-      results (index) := res;
 
    end Kernel;
 

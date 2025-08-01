@@ -44,12 +44,10 @@ package Kernel is
    end record;
 
    procedure Kernel
-     (curr      : Common.Keyed_Lane;
-      prev      : Common.Keyed_Lane;
-      prev_prev : Common.Keyed_Lane;
-      conf      : Scenario_Config;
-      index     : Positive;
-      results   : in out Kernel_Elements);
+     (rpool   : Common.Row_Pool;
+      conf    : Scenario_Config;
+      index   : Positive;
+      results : in out Kernel_Elements);
 
 private
 

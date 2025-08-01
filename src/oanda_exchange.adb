@@ -27,7 +27,7 @@ package body Oanda_Exchange is
       count           : constant Integer :=
         chart.Online_Set_Size + chart.Offline_Set_Size;
       constructed_url : constant String :=
-        ubo.To_String (oanda.URL)
+        oanda.URL'Image
         & "/v3/instruments/"
         & chart.Instrument
         & "/candles?price=MAB&granularity="
@@ -73,7 +73,7 @@ package body Oanda_Exchange is
          Bid_High  => Long_Float'Value (current_candle.Get ("bid").Get ("h")),
          Bid_Low   => Long_Float'Value (current_candle.Get ("bid").Get ("l")),
          Bid_Close => Long_Float'Value (current_candle.Get ("bid").Get ("c")),
-         Time      => Util.Dates.ISO8601.Value (ubo.To_String (temp_string)));
+         Time      => Util.Dates.ISO8601.Value (temp_string'Image));
    end Make_Candle;
 
    function Fetch_Candle_Data
@@ -131,25 +131,25 @@ package body Oanda_Exchange is
          --  construct the pathname
          hashed_file_name :=
            ubo.To_Unbounded_String
-             (ubo.To_String (sys_conf.Cache_Dir)
+             (sys_conf.Cache_Dir.To_String
               & os.Directory_Separator
               & md5.Digest (constructed_url)
               & ".json");
-         io.Put_Line ("checking for " & ubo.To_String (hashed_file_name));
+         io.Put_Line ("checking for " & hashed_file_name.To_String);
 
          --  create the directory if it does not exist
-         if not dir.Exists (ubo.To_String (sys_conf.Cache_Dir)) then
-            dir.Create_Directory (ubo.To_String (sys_conf.Cache_Dir));
+         if not dir.Exists (sys_conf.Cache_Dir.To_String) then
+            dir.Create_Directory (sys_conf.Cache_Dir.To_String);
          end if;
 
          --  check if the file exists
-         file_exists := dir.Exists (ubo.To_String (hashed_file_name));
+         file_exists := dir.Exists (hashed_file_name.To_String);
       end if;
 
       if file_exists then
          --  if it exists then read the root json from cache
          res : constant json.Read_Result :=
-           json.Read_File (ubo.To_String (hashed_file_name));
+           json.Read_File (hashed_file_name.To_String);
          if res.Success then
             root_json := res.Value;
             io.Put_Line ("cache hit.");
@@ -162,14 +162,13 @@ package body Oanda_Exchange is
          io.Put_Line (constructed_url);
          root_json :=
            json.Read
-             (Fetch_Candle_Data
-                (ubo.To_String (oanda.Token), constructed_url));
+             (Fetch_Candle_Data (oanda.Token.To_String, constructed_url));
 
          --  if a date was specified then cache the result
          if date_index > 0 then
             file_handle : io.File_Type;
             io.Create
-              (File => file_handle, Name => ubo.To_String (hashed_file_name));
+              (File => file_handle, Name => hashed_file_name.To_String);
             io.Put (File => file_handle, Item => json.Write (root_json));
             io.Close (file_handle);
          end if;
