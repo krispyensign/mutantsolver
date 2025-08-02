@@ -27,7 +27,7 @@ package body Oanda_Exchange is
       count           : constant Integer :=
         chart.Online_Set_Size + chart.Offline_Set_Size;
       constructed_url : constant String :=
-        oanda.URL'Image
+        ubo.To_String (oanda.URL)
         & "/v3/instruments/"
         & chart.Instrument
         & "/candles?price=MAB&granularity="
@@ -73,7 +73,7 @@ package body Oanda_Exchange is
          Bid_High  => Long_Float'Value (current_candle.Get ("bid").Get ("h")),
          Bid_Low   => Long_Float'Value (current_candle.Get ("bid").Get ("l")),
          Bid_Close => Long_Float'Value (current_candle.Get ("bid").Get ("c")),
-         Time      => Util.Dates.ISO8601.Value (temp_string'Image));
+         Time      => Util.Dates.ISO8601.Value (ubo.To_String (temp_string)));
    end Make_Candle;
 
    function Fetch_Candle_Data

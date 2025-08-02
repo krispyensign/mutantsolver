@@ -13,6 +13,7 @@ with Ada.Calendar.Formatting;
 with Ada.Command_Line;
 with Ada.Strings.Unbounded;
 with Util.Dates.ISO8601;
+with OpenMPI;
 
 procedure Mutantsolver is
    package io renames Ada.Text_IO;
