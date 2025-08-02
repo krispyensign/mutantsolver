@@ -16,7 +16,7 @@ project Mutantsolver is
    end Binder;
 
    package Linker is
-      for Required_Switches use ( "-L/usr/lib", "-lta-lib", "-lm" );
+      for Required_Switches use ( "-L/usr/lib", "-lta-lib", "-lm");
    end Linker;
 
    package Install is

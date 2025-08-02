@@ -45,11 +45,10 @@ package Config is
        and then Chart_Config.TP_SL_Offline_Set_Size
                 < Chart_Config.Offline_Set_Size;
 
-   function Load_System (Result : TOML.Read_Result) return System_Config;
+   function Load_System (result : TOML.Read_Result) return System_Config;
 
-   function Load_Oanda (Result : TOML.Read_Result) return Oanda_Access;
+   function Load_Oanda (result : TOML.Read_Result) return Oanda_Access;
 
-   function Load_Chart_Config (Result : TOML.Read_Result) return Chart_Config;
+   function Load_Chart_Config (result : TOML.Read_Result) return Chart_Config;
 
-   procedure Check_Load_Config_Result (Result : TOML.Read_Result);
 end Config;
