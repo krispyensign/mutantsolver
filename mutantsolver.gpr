@@ -8,8 +8,7 @@ project Mutantsolver is
    for Main use ("mutantsolver.adb");
 
    package Compiler is
-      for Default_Switches ("Ada") use Mutantsolver_Config.Ada_Compiler_Switches &
-      External ("OPENMPI_COMPILER_FLAGS", "");
+      for Default_Switches ("Ada") use Mutantsolver_Config.Ada_Compiler_Switches;
    end Compiler;
 
    package Binder is
@@ -17,8 +16,7 @@ project Mutantsolver is
    end Binder;
 
    package Linker is
-      for Required_Switches use ( "-L/usr/lib", "-lta-lib", "-lm") &
-      External ("OPENMPI_LINKER_FLAGS", "");
+      for Required_Switches use ( "-L/usr/lib", "-lta-lib", "-lm");
    end Linker;
 
    package Install is
